@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard - ReelVibe</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Navbar -->
+        <nav class="dashboard-nav">
+            <div class="nav-container">
+                <div class="logo">
+                    <h1>🎬 ReelVibe</h1>
+                </div>
+                <div class="nav-menu">
+                    <a href="#" class="nav-link active" data-section="browse">Browse</a>
+                    <a href="#" class="nav-link" data-section="movies">Movies</a>
+                    <a href="#" class="nav-link" data-section="music">Music</a>
+                    <a href="#" class="nav-link" data-section="history">History</a>
+                    <a href="#" class="nav-link" data-section="subscription">Subscription</a>
+                </div>
+                <div class="nav-right">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="Search...">
+                        <button id="searchBtn">🔍</button>
+                    </div>
+                    <div class="user-menu">
+                        <button class="user-avatar" id="userMenuBtn">
+                            <span id="userInitials">U</span>
+                        </button>
+                        <div class="dropdown-menu" id="userDropdown">
+                            <div class="dropdown-item" id="userName">Loading...</div>
+                            <div class="dropdown-divider"></div>
+                            <a href="#" class="dropdown-item" data-section="profile">Profile</a>
+                            <a href="#" class="dropdown-item" id="logoutBtn">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="dashboard-content">
+            <!-- Browse Section -->
+            <section id="browseSection" class="content-section active">
+                <div class="section-header">
+                    <h2>Browse Content</h2>
+                    <div class="filter-group">
+                        <select id="filterType" class="filter-select">
+                            <option value="all">All Content</option>
+                            <option value="movies">Movies Only</option>
+                            <option value="music">Music Only</option>
+                        </select>
+                        <select id="filterGenre" class="filter-select">
+                            <option value="">All Genres</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="subscriptionBanner" class="subscription-banner" style="display: none;">
+                    <p>⚠️ Upgrade your subscription to access premium content</p>
+                </div>
+                <div id="browseContent" class="content-grid"></div>
+            </section>
+
+            <!-- Movies Section -->
+            <section id="moviesSection" class="content-section">
+                <div class="section-header">
+                    <h2>Movies</h2>
+                    <select id="movieGenreFilter" class="filter-select">
+                        <option value="">All Genres</option>
+                    </select>
+                </div>
+                <div id="moviesContent" class="content-grid"></div>
+            </section>
+
+            <!-- Music Section -->
+            <section id="musicSection" class="content-section">
+                <div class="section-header">
+                    <h2>Music</h2>
+                    <select id="musicGenreFilter" class="filter-select">
+                        <option value="">All Genres</option>
+                    </select>
+                </div>
+                <div id="musicContent" class="content-grid"></div>
+            </section>
+
+            <!-- History Section -->
+            <section id="historySection" class="content-section">
+                <h2>Watch History</h2>
+                <div id="historyContent" class="content-list"></div>
+            </section>
+
+            <!-- Subscription Section -->
+            <section id="subscriptionSection" class="content-section">
+                <h2>Subscription Management</h2>
+                <div class="subscription-container">
+                    <div class="current-subscription">
+                        <h3>Current Plan</h3>
+                        <div id="currentPlan" class="plan-card">Loading...</div>
+                    </div>
+                    <div class="available-plans">
+                        <h3>Available Plans</h3>
+                        <div id="availablePlans" class="plans-grid"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Profile Section -->
+            <section id="profileSection" class="content-section">
+                <h2>Profile Management</h2>
+                <div class="profile-container">
+                    <form id="profileForm" class="profile-form">
+                        <div class="form-group">
+                            <label for="profileName">Name</label>
+                            <input type="text" id="profileName" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="profileEmail">Email</label>
+                            <input type="email" id="profileEmail" name="email" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Profile</button>
+                    </form>
+                    
+                    <form id="passwordForm" class="profile-form">
+                        <h3>Change Password</h3>
+                        <div class="form-group">
+                            <label for="currentPassword">Current Password</label>
+                            <input type="password" id="currentPassword" name="currentPassword" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" name="newPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Change Password</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Video Player Modal -->
+    <div id="playerModal" class="modal">
+        <div class="modal-content player-modal">
+            <button class="modal-close" id="closePlayer">&times;</button>
+            <div id="playerContainer"></div>
+        </div>
+    </div>
+
+    <script src="/js/user-dashboard.js"></script>
+</body>
+</html>

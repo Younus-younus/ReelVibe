@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - ReelVibe</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Navbar -->
+        <nav class="dashboard-nav admin-nav">
+            <div class="nav-container">
+                <div class="logo">
+                    <h1>🎬 ReelVibe Admin</h1>
+                </div>
+                <div class="nav-menu">
+                    <a href="#" class="nav-link active" data-section="analytics">Analytics</a>
+                    <a href="#" class="nav-link" data-section="movies">Manage Movies</a>
+                    <a href="#" class="nav-link" data-section="music">Manage Music</a>
+                    <a href="#" class="nav-link" data-section="users">Manage Users</a>
+                    <a href="#" class="nav-link" data-section="subscriptions">Subscriptions</a>
+                </div>
+                <div class="nav-right">
+                    <div class="user-menu">
+                        <button class="user-avatar" id="userMenuBtn">
+                            <span id="userInitials">A</span>
+                        </button>
+                        <div class="dropdown-menu" id="userDropdown">
+                            <div class="dropdown-item" id="userName">Admin</div>
+                            <div class="dropdown-divider"></div>
+                            <a href="#" class="dropdown-item" id="logoutBtn">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="dashboard-content">
+            <!-- Analytics Section -->
+            <section id="analyticsSection" class="content-section active">
+                <h2>Analytics Dashboard</h2>
+                <div class="analytics-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <h3>Total Users</h3>
+                            <p class="stat-value" id="totalUsers">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎬</div>
+                        <div class="stat-info">
+                            <h3>Total Movies</h3>
+                            <p class="stat-value" id="totalMovies">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎵</div>
+                        <div class="stat-info">
+                            <h3>Total Music</h3>
+                            <p class="stat-value" id="totalMusic">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-info">
+                            <h3>New Users (7d)</h3>
+                            <p class="stat-value" id="recentUsers">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="subscription-stats">
+                    <h3>Active Subscriptions</h3>
+                    <div id="subscriptionStats" class="stats-grid"></div>
+                </div>
+            </section>
+
+            <!-- Movies Management Section -->
+            <section id="moviesSection" class="content-section">
+                <div class="section-header">
+                    <h2>Manage Movies</h2>
+                    <button class="btn btn-primary" id="addMovieBtn">+ Add Movie</button>
+                </div>
+                <div id="moviesContent" class="admin-table-container"></div>
+            </section>
+
+            <!-- Music Management Section -->
+            <section id="musicSection" class="content-section">
+                <div class="section-header">
+                    <h2>Manage Music</h2>
+                    <button class="btn btn-primary" id="addMusicBtn">+ Add Music</button>
+                </div>
+                <div id="musicContent" class="admin-table-container"></div>
+            </section>
+
+            <!-- Users Management Section -->
+            <section id="usersSection" class="content-section">
+                <h2>Manage Users</h2>
+                <div id="usersContent" class="admin-table-container"></div>
+            </section>
+
+            <!-- Subscriptions Management Section -->
+            <section id="subscriptionsSection" class="content-section">
+                <h2>Manage Subscriptions</h2>
+                <div id="subscriptionsContent" class="admin-table-container"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Add Movie Modal -->
+    <div id="movieModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeMovieModal">&times;</button>
+            <h2 id="movieModalTitle">Add Movie</h2>
+            <form id="movieForm" enctype="multipart/form-data">
+                <input type="hidden" id="movieId" name="movieId">
+                <div class="form-group">
+                    <label for="movieTitle">Title *</label>
+                    <input type="text" id="movieTitle" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="movieDescription">Description</label>
+                    <textarea id="movieDescription" name="description" rows="3"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="movieGenre">Genre</label>
+                        <input type="text" id="movieGenre" name="genre">
+                    </div>
+                    <div class="form-group">
+                        <label for="movieYear">Release Year</label>
+                        <input type="number" id="movieYear" name="release_year" min="1900" max="2030">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="movieRating">Rating (0-10)</label>
+                        <input type="number" id="movieRating" name="rating" min="0" max="10" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="movieSubscription">Subscription Required</label>
+                        <select id="movieSubscription" name="subscription_required">
+                            <option value="free">Free</option>
+                            <option value="basic">Basic</option>
+                            <option value="premium">Premium</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="movieVideo">Video File</label>
+                    <input type="file" id="movieVideo" name="video" accept="video/*">
+                </div>
+                <div class="form-group">
+                    <label for="moviePoster">Poster Image</label>
+                    <input type="file" id="moviePoster" name="poster" accept="image/*">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Save Movie</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Music Modal -->
+    <div id="musicModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeMusicModal">&times;</button>
+            <h2 id="musicModalTitle">Add Music</h2>
+            <form id="musicForm" enctype="multipart/form-data">
+                <input type="hidden" id="musicId" name="musicId">
+                <div class="form-group">
+                    <label for="musicTitle">Title *</label>
+                    <input type="text" id="musicTitle" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label for="musicArtist">Artist</label>
+                    <input type="text" id="musicArtist" name="artist">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="musicGenre">Genre</label>
+                        <input type="text" id="musicGenre" name="genre">
+                    </div>
+                    <div class="form-group">
+                        <label for="musicSubscription">Subscription Required</label>
+                        <select id="musicSubscription" name="subscription_required">
+                            <option value="free">Free</option>
+                            <option value="basic">Basic</option>
+                            <option value="premium">Premium</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="musicAudio">Audio File</label>
+                    <input type="file" id="musicAudio" name="audio" accept="audio/*">
+                </div>
+                <div class="form-group">
+                    <label for="musicPoster">Cover Image</label>
+                    <input type="file" id="musicPoster" name="poster" accept="image/*">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Save Music</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/admin-dashboard.js"></script>
+</body>
+</html>
