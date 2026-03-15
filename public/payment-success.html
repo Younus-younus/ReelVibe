@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful – ReelVibe</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #141414;
+            color: #fff;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        .payment-card {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 50px 40px;
+            max-width: 480px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+        }
+        .icon-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #27ae60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 38px;
+        }
+        .icon-circle.error {
+            background: #e50914;
+        }
+        h1 { font-size: 1.8rem; margin-bottom: 12px; }
+        p  { color: #aaa; margin-bottom: 8px; line-height: 1.6; }
+        .btn {
+            display: inline-block;
+            margin-top: 28px;
+            padding: 12px 32px;
+            background: #e50914;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #c0070f; }
+        .spinner {
+            border: 4px solid #333;
+            border-top: 4px solid #e50914;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 0.9s linear infinite;
+            margin: 0 auto 24px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #status-msg { font-size: 1rem; color: #aaa; }
+    </style>
+</head>
+<body>
+    <div class="payment-card" id="card">
+        <div class="spinner" id="spinner"></div>
+        <p id="status-msg">Verifying your payment…</p>
+    </div>
+
+    <script>
+        const API_URL = '/api';
+        const token   = localStorage.getItem('token');
+
+        // If not logged in, send to login
+        if (!token) {
+            window.location.href = '/login';
+        }
+
+        async function verifyPayment() {
+            const params  = new URLSearchParams(window.location.search);
+            const sessionId = params.get('session_id');
+            const planId    = params.get('plan_id');
+
+            if (!sessionId || !planId) {
+                showError('Invalid payment link. Missing session or plan information.');
+                return;
+            }
+
+            try {
+                const res  = await fetch(
+                    `${API_URL}/payments/verify-session?session_id=${encodeURIComponent(sessionId)}&plan_id=${encodeURIComponent(planId)}`,
+                    { headers: { 'Authorization': `Bearer ${token}` } }
+                );
+                const data = await res.json();
+
+                if (data.success) {
+                    showSuccess(data.message || 'Premium subscription activated!');
+                } else {
+                    showError(data.message || 'Payment verification failed.');
+                }
+            } catch (err) {
+                console.error('Verify error:', err);
+                showError('Network error. Please contact support if your payment was deducted.');
+            }
+        }
+
+        function showSuccess(message) {
+            document.getElementById('card').innerHTML = `
+                <div class="icon-circle">✓</div>
+                <h1>Payment Successful!</h1>
+                <p>${message}</p>
+                <p>You now have full access to all premium movies and music.</p>
+                <a class="btn" href="/user-dashboard">Go to Dashboard</a>
+            `;
+        }
+
+        function showError(message) {
+            document.getElementById('card').innerHTML = `
+                <div class="icon-circle error">✕</div>
+                <h1>Verification Failed</h1>
+                <p>${message}</p>
+                <a class="btn" href="/user-dashboard">Back to Dashboard</a>
+            `;
+        }
+
+        verifyPayment();
+    </script>
+</body>
+</html>

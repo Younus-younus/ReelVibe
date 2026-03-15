@@ -9,6 +9,7 @@ const movieRoutes = require('./routes/movies');
 const musicRoutes = require('./routes/music');
 const subscriptionRoutes = require('./routes/subscriptions');
 const userRoutes = require('./routes/users');
+const paymentRoutes = require('./routes/payments');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,6 +29,7 @@ app.use('/api/movies', movieRoutes);
 app.use('/api/music', musicRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Serve HTML pages
 app.get('/', (req, res) => {
@@ -48,6 +50,14 @@ app.get('/user-dashboard', (req, res) => {
 
 app.get('/admin-dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin-dashboard.html'));
+});
+
+app.get('/payment-success', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'payment-success.html'));
+});
+
+app.get('/payment-cancel', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'payment-cancel.html'));
 });
 
 // Health check

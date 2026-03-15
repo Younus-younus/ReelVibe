@@ -111,7 +111,26 @@
             <section id="profileSection" class="content-section">
                 <h2>Profile Management</h2>
                 <div class="profile-container">
+                    <div class="profile-summary-grid">
+                        <div class="profile-form">
+                            <h3>About You</h3>
+                            <p><strong>Name:</strong> <span id="aboutUserName">-</span></p>
+                            <p><strong>Email:</strong> <span id="aboutUserEmail">-</span></p>
+                            <p><strong>Role:</strong> <span id="aboutUserRole">-</span></p>
+                            <p><strong>Joined:</strong> <span id="aboutUserJoined">-</span></p>
+                        </div>
+
+                        <div class="profile-form">
+                            <h3>Membership Status</h3>
+                            <div id="profileSubscriptionStatus">Loading...</div>
+                            <button type="button" class="btn btn-error" id="cancelMembershipBtn" style="display: none; margin-top: 1rem;">
+                                Cancel Membership
+                            </button>
+                        </div>
+                    </div>
+
                     <form id="profileForm" class="profile-form">
+                        <h3>Update Account</h3>
                         <div class="form-group">
                             <label for="profileName">Name</label>
                             <input type="text" id="profileName" name="name" required>
@@ -148,6 +167,7 @@
         </div>
     </div>
 
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script src="/js/user-dashboard.js"></script>
 </body>
 </html>

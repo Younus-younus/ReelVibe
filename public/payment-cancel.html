@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Cancelled – ReelVibe</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #141414;
+            color: #fff;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+        .payment-card {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 50px 40px;
+            max-width: 480px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+        }
+        .icon-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #f39c12;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 38px;
+        }
+        h1 { font-size: 1.8rem; margin-bottom: 12px; }
+        p  { color: #aaa; margin-bottom: 8px; line-height: 1.6; }
+        .btn {
+            display: inline-block;
+            margin-top: 28px;
+            padding: 12px 32px;
+            background: #e50914;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #c0070f; }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #555;
+            color: #ccc;
+            margin-left: 12px;
+        }
+        .btn-outline:hover { border-color: #e50914; color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="payment-card">
+        <div class="icon-circle">✕</div>
+        <h1>Payment Cancelled</h1>
+        <p>No charge was made. You can try again whenever you're ready.</p>
+        <p>Upgrade to Premium to unlock all movies and music.</p>
+        <a class="btn" href="/user-dashboard">Back to Dashboard</a>
+    </div>
+</body>
+</html>

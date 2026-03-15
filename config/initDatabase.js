@@ -40,7 +40,7 @@ async function initializeDatabase() {
         await connection.query(`
             CREATE TABLE IF NOT EXISTS subscription_plans (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                name ENUM('free', 'basic', 'premium') UNIQUE NOT NULL,
+                name ENUM('free', 'premium') UNIQUE NOT NULL,
                 price DECIMAL(10, 2) DEFAULT 0,
                 description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -59,7 +59,7 @@ async function initializeDatabase() {
                 rating DECIMAL(3, 1) DEFAULT 0,
                 video_url VARCHAR(500),
                 poster_url VARCHAR(500),
-                subscription_required ENUM('free', 'basic', 'premium') DEFAULT 'free',
+                subscription_required ENUM('free', 'premium') DEFAULT 'free',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
@@ -74,7 +74,7 @@ async function initializeDatabase() {
                 genre VARCHAR(100),
                 audio_url VARCHAR(500),
                 poster_url VARCHAR(500),
-                subscription_required ENUM('free', 'basic', 'premium') DEFAULT 'free',
+                subscription_required ENUM('free', 'premium') DEFAULT 'free',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
@@ -131,10 +131,28 @@ async function initializeDatabase() {
         await connection.query(`
             INSERT IGNORE INTO subscription_plans (id, name, price, description) VALUES
             (1, 'free', 0.00, 'Limited content access'),
-            (2, 'basic', 9.99, 'Access to selected movies and music'),
-            (3, 'premium', 19.99, 'Unlimited access to all content')
+            (2, 'premium', 19.99, 'Unlimited access to all content')
         `);
         console.log('✅ Default subscription plans inserted');
+
+        // Migrate old basic-tier data for existing databases
+        await connection.query(`
+            UPDATE movies SET subscription_required = 'premium'
+            WHERE subscription_required = 'basic'
+        `);
+        await connection.query(`
+            UPDATE music SET subscription_required = 'premium'
+            WHERE subscription_required = 'basic'
+        `);
+        await connection.query(`
+            UPDATE user_subscriptions us
+            JOIN subscription_plans basic ON us.plan_id = basic.id AND basic.name = 'basic'
+            JOIN subscription_plans premium ON premium.name = 'premium'
+            SET us.plan_id = premium.id
+        `);
+        await connection.query(`
+            DELETE FROM subscription_plans WHERE name = 'basic'
+        `);
 
         // Create default admin user
         const adminPassword = await bcrypt.hash('admin123', 10);
@@ -155,10 +173,10 @@ async function initializeDatabase() {
         await connection.query(`
             INSERT IGNORE INTO movies (id, title, description, genre, release_year, rating, video_url, poster_url, subscription_required) VALUES
             (1, 'The Adventure Begins', 'An epic journey of discovery and courage', 'Action', 2024, 8.5, '/uploads/sample-video.mp4', '/uploads/poster1.jpg', 'free'),
-            (2, 'Mystery Island', 'A thrilling mystery set on a remote island', 'Thriller', 2023, 7.8, '/uploads/sample-video.mp4', '/uploads/poster2.jpg', 'basic'),
+            (2, 'Mystery Island', 'A thrilling mystery set on a remote island', 'Thriller', 2023, 7.8, '/uploads/sample-video.mp4', '/uploads/poster2.jpg', 'premium'),
             (3, 'Space Odyssey', 'A breathtaking journey through the cosmos', 'Sci-Fi', 2024, 9.2, '/uploads/sample-video.mp4', '/uploads/poster3.jpg', 'premium'),
             (4, 'The Last Stand', 'A hero making their final stand', 'Drama', 2023, 8.0, '/uploads/sample-video.mp4', '/uploads/poster4.jpg', 'free'),
-            (5, 'Comedy Central', 'The funniest movie of the year', 'Comedy', 2024, 7.5, '/uploads/sample-video.mp4', '/uploads/poster5.jpg', 'basic')
+            (5, 'Comedy Central', 'The funniest movie of the year', 'Comedy', 2024, 7.5, '/uploads/sample-video.mp4', '/uploads/poster5.jpg', 'premium')
         `);
         console.log('✅ Sample movies inserted');
 
@@ -166,10 +184,10 @@ async function initializeDatabase() {
         await connection.query(`
             INSERT IGNORE INTO music (id, title, artist, genre, audio_url, poster_url, subscription_required) VALUES
             (1, 'Summer Vibes', 'DJ Sunset', 'Electronic', '/uploads/sample-audio.mp3', '/uploads/music1.jpg', 'free'),
-            (2, 'Rock Anthem', 'The Rockers', 'Rock', '/uploads/sample-audio.mp3', '/uploads/music2.jpg', 'basic'),
+            (2, 'Rock Anthem', 'The Rockers', 'Rock', '/uploads/sample-audio.mp3', '/uploads/music2.jpg', 'premium'),
             (3, 'Classical Dreams', 'Orchestra Masters', 'Classical', '/uploads/sample-audio.mp3', '/uploads/music3.jpg', 'premium'),
             (4, 'Jazz Night', 'Smooth Jazz Band', 'Jazz', '/uploads/sample-audio.mp3', '/uploads/music4.jpg', 'free'),
-            (5, 'Pop Hits', 'Pop Stars', 'Pop', '/uploads/sample-audio.mp3', '/uploads/music5.jpg', 'basic')
+            (5, 'Pop Hits', 'Pop Stars', 'Pop', '/uploads/sample-audio.mp3', '/uploads/music5.jpg', 'premium')
         `);
         console.log('✅ Sample music inserted');
 

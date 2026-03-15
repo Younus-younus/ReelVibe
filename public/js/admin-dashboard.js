@@ -1,19 +1,53 @@
 // API Base URL
 const API_URL = '/api';
 let token = localStorage.getItem('token');
-let currentUser = JSON.parse(localStorage.getItem('user'));
+let currentUser = null;
+
+// Parse user data safely
+try {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+        currentUser = JSON.parse(userData);
+    }
+} catch (error) {
+    console.error('Error parsing user data:', error);
+    localStorage.clear();
+}
 
 // Check authentication and admin role
 if (!token || !currentUser || currentUser.role !== 'admin') {
-    window.location.href = '/login';
+    console.log('Authentication check failed:', { hasToken: !!token, hasUser: !!currentUser, role: currentUser?.role });
+    localStorage.clear();
+    window.location.href = '/login.html';
 }
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('Dashboard initializing...', { hasToken: !!token, user: currentUser });
     initializeUserMenu();
     loadAnalytics();
     setupEventListeners();
 });
+
+// Helper function for authenticated API calls
+async function authenticatedFetch(url, options = {}) {
+    options.headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`
+    };
+    
+    const response = await fetch(url, options);
+    
+    // Check for authentication errors
+    if (response.status === 401 || response.status === 403) {
+        console.error('Authentication failed, clearing storage and redirecting');
+        localStorage.clear();
+        window.location.href = '/login.html';
+        throw new Error('Authentication failed');
+    }
+    
+    return response;
+}
 
 // Initialize user menu
 function initializeUserMenu() {
@@ -106,9 +140,7 @@ function switchSection(section) {
 // Load analytics
 async function loadAnalytics() {
     try {
-        const response = await fetch(`${API_URL}/users/analytics`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await authenticatedFetch(`${API_URL}/users/analytics`);
         
         const data = await response.json();
         
@@ -140,13 +172,20 @@ async function loadMovies() {
     container.innerHTML = '<div class="loading">Loading movies...</div>';
     
     try {
-        const response = await fetch(`${API_URL}/movies`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        console.log('Fetching movies with token:', token?.substring(0, 20) + '...');
+        const response = await authenticatedFetch(`${API_URL}/movies`);
         
+        console.log('Movies response status:', response.status);
         const data = await response.json();
+        console.log('Movies data:', data);
         
-        if (!data.success || data.movies.length === 0) {
+        if (!data.success) {
+            console.error('Movies fetch failed:', data.message);
+            container.innerHTML = `<div class="empty-state"><p>Error: ${data.message}</p></div>`;
+            return;
+        }
+        
+        if (!data.movies || data.movies.length === 0) {
             container.innerHTML = '<div class="empty-state"><p>No movies found</p></div>';
             return;
         }
@@ -196,13 +235,20 @@ async function loadMusic() {
     container.innerHTML = '<div class="loading">Loading music...</div>';
     
     try {
-        const response = await fetch(`${API_URL}/music`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        console.log('Fetching music with token:', token?.substring(0, 20) + '...');
+        const response = await authenticatedFetch(`${API_URL}/music`);
         
+        console.log('Music response status:', response.status);
         const data = await response.json();
+        console.log('Music data:', data);
         
-        if (!data.success || data.music.length === 0) {
+        if (!data.success) {
+            console.error('Music fetch failed:', data.message);
+            container.innerHTML = `<div class="empty-state"><p>Error: ${data.message}</p></div>`;
+            return;
+        }
+        
+        if (!data.music || data.music.length === 0) {
             container.innerHTML = '<div class="empty-state"><p>No music found</p></div>';
             return;
         }
@@ -250,9 +296,7 @@ async function loadUsers() {
     container.innerHTML = '<div class="loading">Loading users...</div>';
     
     try {
-        const response = await fetch(`${API_URL}/users`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await authenticatedFetch(`${API_URL}/users`);
         
         const data = await response.json();
         
@@ -312,9 +356,7 @@ async function loadSubscriptions() {
     container.innerHTML = '<div class="loading">Loading subscriptions...</div>';
     
     try {
-        const response = await fetch(`${API_URL}/subscriptions/all`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await authenticatedFetch(`${API_URL}/subscriptions/all`);
         
         const data = await response.json();
         

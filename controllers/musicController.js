@@ -22,23 +22,35 @@ exports.getAllMusic = async (req, res) => {
         query += ' ORDER BY created_at DESC';
 
         const [music] = await db.query(query, params);
+        const normalizedMusic = music.map(item => ({
+            ...item,
+            subscription_required: item.subscription_required === 'basic' ? 'premium' : item.subscription_required
+        }));
 
-        // Filter based on user subscription
+        // Admins see all music
+        if (req.user.role === 'admin') {
+            return res.json({ success: true, music: normalizedMusic });
+        }
+
+        // Get user subscription status for regular users
         const [userSub] = await db.query(
-            `SELECT sp.name as plan FROM user_subscriptions us
+            `SELECT sp.name as plan, us.status, us.end_date FROM user_subscriptions us
              JOIN subscription_plans sp ON us.plan_id = sp.id
-             WHERE us.user_id = ? AND us.status = 'active'`,
+             WHERE us.user_id = ?
+               AND us.status = 'active'
+               AND (us.end_date IS NULL OR us.end_date >= CURDATE())
+             ORDER BY sp.price DESC, us.created_at DESC
+             LIMIT 1`,
             [req.user.id]
         );
 
-        const userPlan = userSub[0]?.plan || 'free';
-        const accessibleMusic = music.filter(item => {
-            if (userPlan === 'premium') return true;
-            if (userPlan === 'basic') return item.subscription_required !== 'premium';
-            return item.subscription_required === 'free';
-        });
+        const hasActiveMembership = userSub.length > 0;
 
-        res.json({ success: true, music: accessibleMusic });
+        const effectivePlan = userSub[0]?.plan === 'basic' ? 'premium' : (userSub[0]?.plan || 'free');
+        const userPlan = hasActiveMembership ? effectivePlan : 'free';
+        
+        // Return ALL music but include user's plan for frontend to show locks
+        res.json({ success: true, music: normalizedMusic, userPlan });
 
     } catch (error) {
         console.error('Get music error:', error);
@@ -56,26 +68,45 @@ exports.getMusic = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Music not found' });
         }
 
-        // Check user subscription access
+        const musicItem = {
+            ...music[0],
+            subscription_required: music[0].subscription_required === 'basic' ? 'premium' : music[0].subscription_required
+        };
+
+        // Admins have full access without subscription checks
+        if (req.user.role === 'admin') {
+            return res.json({ success: true, music: musicItem });
+        }
+
+        // Check user subscription access for regular users
         const [userSub] = await db.query(
-            `SELECT sp.name as plan FROM user_subscriptions us
+            `SELECT sp.name as plan, us.status, us.end_date FROM user_subscriptions us
              JOIN subscription_plans sp ON us.plan_id = sp.id
-             WHERE us.user_id = ? AND us.status = 'active'`,
+             WHERE us.user_id = ?
+               AND us.status = 'active'
+               AND (us.end_date IS NULL OR us.end_date >= CURDATE())
+             ORDER BY sp.price DESC, us.created_at DESC
+             LIMIT 1`,
             [req.user.id]
         );
 
-        const userPlan = userSub[0]?.plan || 'free';
-        const musicItem = music[0];
+        // Determine user's effective plan (choose highest active non-expired plan)
+        const hasActiveMembership = userSub.length > 0;
 
-        const hasAccess = 
+        const effectivePlan = userSub[0]?.plan === 'basic' ? 'premium' : (userSub[0]?.plan || 'free');
+        const userPlan = hasActiveMembership ? effectivePlan : 'free';
+
+        // Check if user has access to this content
+        const hasAccess =
             userPlan === 'premium' ||
-            (userPlan === 'basic' && musicItem.subscription_required !== 'premium') ||
             musicItem.subscription_required === 'free';
 
         if (!hasAccess) {
+            const requiredPlan = musicItem.subscription_required;
             return res.status(403).json({ 
                 success: false, 
-                message: 'Upgrade your subscription to access this content' 
+                message: `This content requires ${requiredPlan.charAt(0).toUpperCase() + requiredPlan.slice(1)} subscription. Please upgrade to listen.`,
+                requiredPlan: requiredPlan
             });
         }
 
@@ -123,12 +154,25 @@ exports.addMusic = async (req, res) => {
 exports.updateMusic = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, artist, genre, subscription_required } = req.body;
 
         const [existing] = await db.query('SELECT * FROM music WHERE id = ?', [id]);
         if (existing.length === 0) {
             return res.status(404).json({ success: false, message: 'Music not found' });
         }
+
+        // Use existing values as fallback if new values are not provided
+        const title = req.body.title !== undefined && req.body.title !== '' 
+            ? req.body.title 
+            : existing[0].title;
+        const artist = req.body.artist !== undefined 
+            ? req.body.artist 
+            : existing[0].artist;
+        const genre = req.body.genre !== undefined && req.body.genre !== '' 
+            ? req.body.genre 
+            : existing[0].genre;
+        const subscription_required = req.body.subscription_required !== undefined 
+            ? req.body.subscription_required 
+            : existing[0].subscription_required;
 
         let audio_url = existing[0].audio_url;
         let poster_url = existing[0].poster_url;
@@ -155,8 +199,7 @@ exports.updateMusic = async (req, res) => {
             `UPDATE music SET title = ?, artist = ?, genre = ?, audio_url = ?, 
              poster_url = ?, subscription_required = ?
              WHERE id = ?`,
-            [title, artist, genre, audio_url, poster_url, 
-             subscription_required || existing[0].subscription_required, id]
+            [title, artist, genre, audio_url, poster_url, subscription_required, id]
         );
 
         res.json({ success: true, message: 'Music updated successfully' });

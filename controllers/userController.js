@@ -8,7 +8,9 @@ exports.getAllUsers = async (req, res) => {
             `SELECT u.id, u.name, u.email, u.role, u.created_at,
                     sp.name as subscription_plan, us.status as subscription_status
              FROM users u
-             LEFT JOIN user_subscriptions us ON u.id = us.user_id AND us.status = 'active'
+             LEFT JOIN user_subscriptions us ON u.id = us.user_id
+            AND us.status = 'active'
+            AND (us.end_date IS NULL OR us.end_date >= CURDATE())
              LEFT JOIN subscription_plans sp ON us.plan_id = sp.id
              ORDER BY u.created_at DESC`
         );
@@ -30,7 +32,9 @@ exports.getUserById = async (req, res) => {
             `SELECT u.id, u.name, u.email, u.role, u.created_at,
                     sp.name as subscription_plan, us.status as subscription_status
              FROM users u
-             LEFT JOIN user_subscriptions us ON u.id = us.user_id AND us.status = 'active'
+             LEFT JOIN user_subscriptions us ON u.id = us.user_id
+                AND us.status = 'active'
+                AND (us.end_date IS NULL OR us.end_date >= CURDATE())
              LEFT JOIN subscription_plans sp ON us.plan_id = sp.id
              WHERE u.id = ?`,
             [id]
@@ -135,7 +139,8 @@ exports.getAnalytics = async (req, res) => {
             `SELECT sp.name as plan, COUNT(*) as count
              FROM user_subscriptions us
              JOIN subscription_plans sp ON us.plan_id = sp.id
-             WHERE us.status = 'active'
+                         WHERE us.status = 'active'
+                             AND (us.end_date IS NULL OR us.end_date >= CURDATE())
              GROUP BY sp.name`
         );
 

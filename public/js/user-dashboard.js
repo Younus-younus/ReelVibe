@@ -2,6 +2,7 @@
 const API_URL = '/api';
 let token = localStorage.getItem('token');
 let currentUser = JSON.parse(localStorage.getItem('user'));
+let userSubscriptionPlan = 'free'; // Global variable to store user's subscription plan
 
 // Check authentication
 if (!token || !currentUser) {
@@ -59,6 +60,17 @@ function setupEventListeners() {
             link.classList.add('active');
         });
     });
+
+    // Profile menu item in dropdown
+    document.querySelectorAll('.dropdown-item[data-section]').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const section = item.dataset.section;
+            switchSection(section);
+            document.getElementById('userDropdown').classList.remove('show');
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        });
+    });
     
     // Logout
     document.getElementById('logoutBtn').addEventListener('click', (e) => {
@@ -88,6 +100,9 @@ function setupEventListeners() {
     // Profile forms
     document.getElementById('profileForm').addEventListener('submit', updateProfile);
     document.getElementById('passwordForm').addEventListener('submit', changePassword);
+
+    // Membership cancel action from profile page
+    document.getElementById('cancelMembershipBtn').addEventListener('click', cancelMembershipFromProfile);
     
     // Close player modal
     document.getElementById('closePlayer').addEventListener('click', closePlayer);
@@ -120,9 +135,13 @@ function switchSection(section) {
             break;
         case 'profile':
             document.getElementById('profileSection').classList.add('active');
-            loadUserProfile();
+            loadProfileSection();
             break;
     }
+}
+
+async function loadProfileSection() {
+    await Promise.all([loadUserProfile(), loadProfileSubscriptionStatus()]);
 }
 
 // Load user profile
@@ -137,9 +156,52 @@ async function loadUserProfile() {
             currentUser = data.user;
             document.getElementById('profileName').value = data.user.name;
             document.getElementById('profileEmail').value = data.user.email;
+
+            // About user block in profile section
+            document.getElementById('aboutUserName').textContent = data.user.name || 'N/A';
+            document.getElementById('aboutUserEmail').textContent = data.user.email || 'N/A';
+            document.getElementById('aboutUserRole').textContent = data.user.role || 'user';
+            document.getElementById('aboutUserJoined').textContent = data.user.created_at
+                ? new Date(data.user.created_at).toLocaleDateString()
+                : 'N/A';
         }
     } catch (error) {
         console.error('Error loading profile:', error);
+    }
+}
+
+async function loadProfileSubscriptionStatus() {
+    try {
+        const response = await fetch(`${API_URL}/subscriptions/my-subscription`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await response.json();
+        const statusContainer = document.getElementById('profileSubscriptionStatus');
+        const cancelBtn = document.getElementById('cancelMembershipBtn');
+
+        if (data.success && data.subscription) {
+            const sub = data.subscription;
+            const planName = (sub.plan_name || 'free').toLowerCase();
+
+            userSubscriptionPlan = planName;
+
+            statusContainer.innerHTML = `
+                <p><strong>Current Plan:</strong> ${planName.toUpperCase()}</p>
+                <p><strong>Status:</strong> ${sub.status}</p>
+                <p><strong>Start Date:</strong> ${new Date(sub.start_date).toLocaleDateString()}</p>
+                <p><strong>End Date:</strong> ${sub.end_date ? new Date(sub.end_date).toLocaleDateString() : 'N/A'}</p>
+            `;
+
+            // Allow direct cancel only for active premium memberships
+            cancelBtn.style.display = (planName === 'premium' && sub.status === 'active') ? 'inline-block' : 'none';
+        } else {
+            userSubscriptionPlan = 'free';
+            statusContainer.innerHTML = '<p>No active subscription found.</p>';
+            cancelBtn.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error loading profile subscription status:', error);
     }
 }
 
@@ -191,6 +253,9 @@ async function loadMovies() {
     try {
         const movies = await fetchMovies(genre);
         
+        console.log('Load Movies - Total movies fetched:', movies.length);
+        console.log('Load Movies - Current user plan:', userSubscriptionPlan);
+        
         if (movies.length === 0) {
             container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🎬</div><p>No movies available</p></div>';
             return;
@@ -241,6 +306,15 @@ async function fetchMovies(genre = '') {
     });
     const data = await response.json();
     
+    console.log('Fetch Movies Response:', data);
+    console.log('Number of movies:', data.movies?.length);
+    console.log('User Plan:', data.userPlan);
+    
+    // Store user's subscription plan from response
+    if (data.userPlan) {
+        userSubscriptionPlan = data.userPlan;
+    }
+    
     // Load genres for filter
     const genreResponse = await fetch(`${API_URL}/movies/genres`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -260,6 +334,11 @@ async function fetchMusic(genre = '') {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await response.json();
+    
+    // Store user's subscription plan from response
+    if (data.userPlan) {
+        userSubscriptionPlan = data.userPlan;
+    }
     
     // Load genres for filter
     const genreResponse = await fetch(`${API_URL}/music/genres`, {
@@ -300,13 +379,23 @@ function createContentCard(item) {
         ? `${item.genre || 'Unknown'} • ${item.release_year || 'N/A'} • ⭐ ${item.rating || 'N/A'}`
         : `${item.artist || 'Unknown'} • ${item.genre || 'Unknown'}`;
     
-    const badge = item.subscription_required !== 'free' 
-        ? `<span class="subscription-badge">${item.subscription_required}</span>`
+    // Check if user has access to this content
+    const requiredPlan = item.subscription_required === 'basic' ? 'premium' : item.subscription_required;
+    const hasAccess = 
+        requiredPlan === 'free' ||
+        (userSubscriptionPlan === 'premium');
+    
+    // Show lock icon if user doesn't have access
+    const lockIcon = !hasAccess ? '<div class="lock-overlay">🔒</div>' : '';
+    
+    const badge = requiredPlan !== 'free' 
+        ? `<span class="subscription-badge ${!hasAccess ? 'locked' : ''}">${requiredPlan}</span>`
         : '';
     
     return `
-        <div class="content-card" data-id="${item.id}">
+        <div class="content-card ${!hasAccess ? 'locked-content' : ''}" data-id="${item.id}">
             ${badge}
+            ${lockIcon}
             <img src="${posterUrl}" alt="${title}" onerror="this.src='https://via.placeholder.com/200x300?text=No+Image'">
             <div class="content-card-info">
                 <div class="content-card-title">${title}</div>
@@ -329,7 +418,15 @@ async function playContent(item) {
         const data = await response.json();
         
         if (!data.success) {
-            alert(data.message);
+            // Show subscription upgrade message if access denied
+            if (response.status === 403) {
+                const requiredPlan = (data.requiredPlan || item.subscription_required || 'premium') === 'basic'
+                    ? 'premium'
+                    : (data.requiredPlan || item.subscription_required || 'premium');
+                alert(`🔒 ${data.message}\n\nThis content requires ${requiredPlan.toUpperCase()} subscription.\nPlease visit the Subscription page to upgrade.`);
+            } else {
+                alert(data.message);
+            }
             return;
         }
         
@@ -446,16 +543,27 @@ async function loadSubscription() {
         
         if (plansData.success) {
             const plansGrid = document.getElementById('availablePlans');
-            plansGrid.innerHTML = plansData.plans.map(plan => `
-                <div class="plan-card">
+            plansGrid.innerHTML = plansData.plans.map(plan => {
+                const isCurrent = subData.subscription?.plan_id === plan.id;
+                const isPaid    = parseFloat(plan.price) > 0;
+                const btnLabel  = isCurrent
+                    ? 'Current Plan'
+                    : isPaid ? '💳 Pay & Upgrade' : 'Switch to Free';
+                const btnDisabled = isCurrent ? 'disabled' : '';
+                const priceLabel = parseFloat(plan.price) === 0
+                    ? 'Free'
+                    : `₹${parseFloat(plan.price).toFixed(2)}<span>/month</span>`;
+                return `
+                <div class="plan-card${isCurrent ? ' current-active-plan' : ''}">
                     <h4>${plan.name.toUpperCase()}</h4>
-                    <p class="price">$${plan.price}<span>/month</span></p>
+                    <p class="price">${priceLabel}</p>
                     <p>${plan.description}</p>
-                    <button class="btn btn-primary" onclick="subscribeToPlan(${plan.id})">
-                        ${subData.subscription?.plan_id === plan.id ? 'Current Plan' : 'Subscribe'}
+                    ${isPaid && !isCurrent ? '<p class="payment-note"><small>🔒 Secure payment via Razorpay</small></p>' : ''}
+                    <button class="btn btn-primary" onclick="subscribeToPlan(${plan.id}, ${plan.price}, '${plan.name.toUpperCase()}')" ${btnDisabled}>
+                        ${btnLabel}
                     </button>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
     } catch (error) {
         console.error('Error loading subscription:', error);
@@ -463,30 +571,144 @@ async function loadSubscription() {
 }
 
 // Subscribe to plan
-async function subscribeToPlan(planId) {
-    if (!confirm('Are you sure you want to change your subscription?')) return;
-    
+// price > 0  → premium: opens Razorpay in-page checkout modal
+// price === 0 → free: direct subscribe (no payment)
+async function subscribeToPlan(planId, price, planName) {
+    const isPaid = parseFloat(price) > 0;
+
+    if (isPaid) {
+        try {
+            // Step 1: Create a Razorpay order on the backend
+            const orderRes = await fetch(`${API_URL}/payments/create-order`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ plan_id: planId })
+            });
+            const orderData = await orderRes.json();
+
+            if (!orderData.success) {
+                alert(orderData.message || 'Could not initiate payment. Please try again.');
+                return;
+            }
+
+            // Step 2: Open the Razorpay checkout modal
+            const options = {
+                key:         orderData.key_id,
+                amount:      orderData.amount,
+                currency:    orderData.currency,
+                name:        'ReelVibe',
+                description: `${planName} Plan – 1 Month Access`,
+                image:       '/favicon.ico',
+                order_id:    orderData.order_id,
+                prefill: {
+                    name:  currentUser?.name  || '',
+                    email: currentUser?.email || '',
+                },
+                theme: { color: '#e50914' },
+
+                // Step 3: On successful payment, verify signature on the backend
+                handler: async function (response) {
+                    try {
+                        const verifyRes = await fetch(`${API_URL}/payments/verify-payment`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                razorpay_order_id:   response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature:  response.razorpay_signature,
+                                plan_id:             planId,
+                            })
+                        });
+                        const verifyData = await verifyRes.json();
+
+                        if (verifyData.success) {
+                            alert('🎉 ' + verifyData.message);
+                            loadSubscription();
+                            loadProfileSubscriptionStatus();
+                        } else {
+                            alert('Payment received but activation failed: ' + verifyData.message);
+                        }
+                    } catch (err) {
+                        console.error('Verify payment error:', err);
+                        alert('Payment received but verification failed. Please contact support.');
+                    }
+                },
+
+                modal: {
+                    ondismiss: function () {
+                        // User closed the modal without paying — no action needed
+                    }
+                }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response) {
+                alert('Payment failed: ' + (response.error.description || 'Unknown error'));
+            });
+            rzp.open();
+
+        } catch (error) {
+            console.error('Error opening Razorpay checkout:', error);
+            alert('Error initiating payment. Please try again.');
+        }
+
+    } else {
+        // Free plan – direct subscribe (no payment needed)
+        if (!confirm('Switch to the Free plan? Premium access will be removed.')) return;
+
+        try {
+            const response = await fetch(`${API_URL}/subscriptions/subscribe`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ plan_id: planId })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert(data.message);
+                loadSubscription();
+                loadProfileSubscriptionStatus();
+            } else {
+                alert(data.message);
+            }
+        } catch (error) {
+            console.error('Error subscribing:', error);
+            alert('Error processing subscription');
+        }
+    }
+}
+
+async function cancelMembershipFromProfile() {
+    if (!confirm('Are you sure you want to cancel your membership?')) return;
+
     try {
-        const response = await fetch(`${API_URL}/subscriptions/subscribe`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ plan_id: planId })
+        const response = await fetch(`${API_URL}/subscriptions/cancel`, {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             alert(data.message);
-            loadSubscription();
+            userSubscriptionPlan = 'free';
+            await Promise.all([loadProfileSubscriptionStatus(), loadSubscription(), loadContent()]);
         } else {
-            alert(data.message);
+            alert(data.message || 'Unable to cancel membership');
         }
     } catch (error) {
-        console.error('Error subscribing:', error);
-        alert('Error processing subscription');
+        console.error('Error cancelling membership from profile:', error);
+        alert('Error cancelling membership');
     }
 }
 

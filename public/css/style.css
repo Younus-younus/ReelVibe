@@ -610,6 +610,42 @@ body {
     padding: 0.3rem 0.6rem;
     border-radius: 20px;
     font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    z-index: 2;
+}
+
+.subscription-badge.locked {
+    background-color: #f44336;
+}
+
+/* Locked Content Styles */
+.locked-content {
+    position: relative;
+}
+
+.locked-content::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    pointer-events: none;
+    border-radius: var(--border-radius);
+}
+
+.lock-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3rem;
+    z-index: 3;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
 }
 
 /* Analytics Cards */
@@ -811,6 +847,12 @@ body {
     padding: 2rem;
     border-radius: var(--border-radius);
     margin-bottom: 2rem;
+}
+
+.profile-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
 }
 
 .current-subscription {

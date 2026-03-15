@@ -27,7 +27,6 @@ A full-stack streaming platform for movies and music with user authentication, r
 
 ### Subscription Tiers
 - **Free**: Limited content access
-- **Basic**: Selected movies/music
 - **Premium**: Unlimited access
 
 ## 🛠️ Tech Stack

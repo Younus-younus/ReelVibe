@@ -102,7 +102,9 @@ exports.getProfile = async (req, res) => {
                     sp.name as subscription_plan, us.status as subscription_status,
                     us.start_date, us.end_date
              FROM users u
-             LEFT JOIN user_subscriptions us ON u.id = us.user_id AND us.status = 'active'
+             LEFT JOIN user_subscriptions us ON u.id = us.user_id
+                AND us.status = 'active'
+                AND (us.end_date IS NULL OR us.end_date >= CURDATE())
              LEFT JOIN subscription_plans sp ON us.plan_id = sp.id
              WHERE u.id = ?`,
             [req.user.id]
