@@ -10,6 +10,7 @@ A full-stack streaming platform for movies and music with user authentication, r
 - JWT-based authentication
 - Password hashing with bcrypt
 - Role-based access control (Admin/User)
+- Real-time email validation (syntax + MX + optional mailbox check via API)
 
 ### User Dashboard
 - Browse Movies & Music
@@ -46,6 +47,12 @@ npm install
 2. Configure MySQL database:
 - Create a database named `reelvibe`
 - Update `.env` file with your database credentials
+
+Email verification options in `.env`:
+- `EMAIL_VERIFICATION_PROVIDER=abstract`
+- `EMAIL_VERIFICATION_API_KEY=your_key_here`
+
+If `EMAIL_VERIFICATION_API_KEY` is empty, the app still validates syntax and MX records, but mailbox-level checks are skipped.
 
 3. Initialize database:
 ```bash

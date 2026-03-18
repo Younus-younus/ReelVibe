@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
+const { verifyEmailAddress } = require('../services/emailVerificationService');
 
 // User Registration
 exports.register = async (req, res) => {
@@ -10,6 +11,19 @@ exports.register = async (req, res) => {
         // Validate input
         if (!name || !email || !password) {
             return res.status(400).json({ success: false, message: 'All fields are required' });
+        }
+
+        const verification = await verifyEmailAddress(email);
+        if (!verification.isValidSyntax) {
+            return res.status(400).json({ success: false, message: 'Please enter a valid email format' });
+        }
+
+        if (!verification.hasMxRecords) {
+            return res.status(400).json({ success: false, message: 'Email domain cannot receive messages' });
+        }
+
+        if (verification.exists === false) {
+            return res.status(400).json({ success: false, message: 'This email mailbox does not appear to exist' });
         }
 
         // Check if user already exists
@@ -42,6 +56,39 @@ exports.register = async (req, res) => {
     } catch (error) {
         console.error('Registration error:', error);
         res.status(500).json({ success: false, message: 'Server error during registration' });
+    }
+};
+
+// Verify Email (Real-Time)
+exports.verifyEmail = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Email is required' });
+        }
+
+        const verification = await verifyEmailAddress(email);
+
+        let message = 'Email looks valid';
+        if (!verification.isValidSyntax) {
+            message = 'Invalid email format';
+        } else if (!verification.hasMxRecords) {
+            message = 'This domain is not configured to receive emails';
+        } else if (verification.exists === false) {
+            message = 'Mailbox could not be verified as active';
+        } else if (!verification.isApiCheckPerformed) {
+            message = 'Email domain is valid';
+        }
+
+        return res.json({
+            success: true,
+            message,
+            verification
+        });
+    } catch (error) {
+        console.error('Verify email error:', error);
+        return res.status(500).json({ success: false, message: 'Server error while verifying email' });
     }
 };
 

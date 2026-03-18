@@ -371,6 +371,28 @@ body {
     display: block;
 }
 
+.email-status {
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    min-height: 1.2rem;
+}
+
+.email-status.loading {
+    color: #f5c16c;
+}
+
+.email-status.success {
+    color: #67e680;
+}
+
+.email-status.error {
+    color: #ff5f6d;
+}
+
+.email-status.info {
+    color: var(--text-secondary);
+}
+
 .auth-footer {
     margin-top: 2rem;
     text-align: center;
