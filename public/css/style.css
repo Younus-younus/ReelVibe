@@ -442,6 +442,44 @@ body {
     align-items: center;
 }
 
+.nav-toggle {
+    display: none;
+    width: 42px;
+    height: 42px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex-direction: column;
+}
+
+.nav-toggle span {
+    width: 18px;
+    height: 2px;
+    background-color: var(--text-primary);
+    border-radius: 999px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.mobile-nav-panel {
+    display: contents;
+}
+
+.dashboard-nav.mobile-open .nav-toggle span:nth-child(1) {
+    transform: translateY(6px) rotate(45deg);
+}
+
+.dashboard-nav.mobile-open .nav-toggle span:nth-child(2) {
+    opacity: 0;
+}
+
+.dashboard-nav.mobile-open .nav-toggle span:nth-child(3) {
+    transform: translateY(-6px) rotate(-45deg);
+}
+
 .search-box {
     display: flex;
     gap: 0.5rem;
@@ -930,6 +968,14 @@ body {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .nav-container {
+        padding: 0 1rem;
+    }
+
+    .logo h1 {
+        font-size: 1.5rem;
+    }
+
     .hero-title {
         font-size: 2rem;
     }
@@ -938,13 +984,59 @@ body {
         font-size: 1.2rem;
     }
 
-    .nav-menu {
-        flex-wrap: wrap;
-        gap: 1rem;
+    .hero-section {
+        height: auto;
+        min-height: 88vh;
+        padding: 6rem 1.25rem 3rem;
+    }
+
+    .auth-container {
+        padding: 1rem;
+        margin-top: 70px;
+    }
+
+    .auth-box {
+        padding: 2rem 1.25rem;
+    }
+
+    .dashboard-content {
+        padding: 1.25rem 1rem;
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .section-header h2 {
+        font-size: 1.6rem;
+    }
+
+    .filter-group {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .filter-select {
+        width: 100%;
     }
 
     .content-grid {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+
+    .content-card img {
+        height: 220px;
+    }
+
+    .history-item {
+        align-items: flex-start;
+    }
+
+    .history-item img {
+        width: 64px;
+        height: 64px;
     }
 
     .form-row {
@@ -959,8 +1051,118 @@ body {
         grid-template-columns: 1fr;
     }
 
-    .search-box {
+    .dashboard-nav {
+        padding: 0.75rem 0;
+    }
+
+    .dashboard-nav .nav-container {
+        flex-wrap: wrap;
+        position: relative;
+        row-gap: 0.75rem;
+    }
+
+    .dashboard-nav .logo {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .dashboard-nav .nav-toggle {
+        display: inline-flex;
+    }
+
+    .dashboard-nav .mobile-nav-panel {
         display: none;
+        width: 100%;
+        padding: 0.75rem;
+        background-color: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: var(--border-radius);
+    }
+
+    .dashboard-nav.mobile-open .mobile-nav-panel {
+        display: block;
+    }
+
+    .dashboard-nav .nav-menu {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.35rem;
+    }
+
+    .dashboard-nav .nav-right {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 0.75rem;
+    }
+
+    .dashboard-nav .search-box {
+        flex: 1;
+        display: flex;
+    }
+
+    .dashboard-nav .search-box input {
+        width: 100%;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 0.75rem 0.6rem;
+        font-size: 0.9rem;
+    }
+
+    .modal-content {
+        width: 95%;
+        padding: 1.5rem 1rem;
+    }
+
+    .profile-form {
+        padding: 1.25rem;
+    }
+
+    .btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .btn.btn-small {
+        width: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-title {
+        font-size: 1.7rem;
+    }
+
+    .hero-subtitle {
+        font-size: 1rem;
+    }
+
+    .features-section,
+    .pricing-section {
+        padding: 3rem 1rem;
+    }
+
+    .feature-card {
+        padding: 1.25rem;
+    }
+
+    .dashboard-nav .logo h1 {
+        font-size: 1.2rem;
+    }
+
+    .dashboard-nav .mobile-nav-panel {
+        padding: 0.6rem;
+    }
+
+    .content-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.85rem;
+    }
+
+    .content-card img {
+        height: 180px;
     }
 }
 

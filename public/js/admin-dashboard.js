@@ -25,9 +25,50 @@ if (!token || !currentUser || currentUser.role !== 'admin') {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Dashboard initializing...', { hasToken: !!token, user: currentUser });
     initializeUserMenu();
+    initializeMobileNav();
     loadAnalytics();
     setupEventListeners();
 });
+
+function initializeMobileNav() {
+    const dashboardNav = document.querySelector('.dashboard-nav');
+    const toggleBtn = document.getElementById('mobileNavToggle');
+
+    if (!dashboardNav || !toggleBtn) {
+        return;
+    }
+
+    const closeMobileNav = () => {
+        dashboardNav.classList.remove('mobile-open');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+    };
+
+    toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = dashboardNav.classList.toggle('mobile-open');
+        toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.dashboard-nav')) {
+            closeMobileNav();
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            closeMobileNav();
+        }
+    });
+
+    document.querySelectorAll('.nav-link').forEach((link) => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                closeMobileNav();
+            }
+        });
+    });
+}
 
 // Helper function for authenticated API calls
 async function authenticatedFetch(url, options = {}) {
