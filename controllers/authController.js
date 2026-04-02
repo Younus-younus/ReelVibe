@@ -1,44 +1,150 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const db = require('../config/database');
-const { verifyEmailAddress } = require('../services/emailVerificationService');
 
-// User Registration
-exports.register = async (req, res) => {
+const OTP_EXPIRY_MINUTES = Number(process.env.OTP_EXPIRY_MINUTES || 10);
+
+async function ensureOtpTable() {
+    await db.query(`
+        CREATE TABLE IF NOT EXISTS email_otps (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            otp_code VARCHAR(6) NOT NULL,
+            expires_at DATETIME NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+}
+
+function generateOtp() {
+    return String(crypto.randomInt(100000, 1000000));
+}
+
+function getMailTransporter() {
+    const { SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS } = process.env;
+
+    if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
+        throw new Error('SMTP credentials are not fully configured');
+    }
+
+    return nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: Number(SMTP_PORT),
+        secure: String(SMTP_SECURE || 'false').toLowerCase() === 'true',
+        auth: {
+            user: SMTP_USER,
+            pass: SMTP_PASS
+        }
+    });
+}
+
+async function sendOtpMail(name, email, otp) {
+    const transporter = getMailTransporter();
+    const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
+
+    await transporter.sendMail({
+        from: fromEmail,
+        to: email,
+        subject: 'Your ReelVibe OTP Code',
+        text: `Hi ${name}, your ReelVibe OTP is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`,
+        html: `<p>Hi ${name},</p><p>Your ReelVibe OTP is:</p><h2 style="letter-spacing: 3px;">${otp}</h2><p>This code expires in ${OTP_EXPIRY_MINUTES} minutes.</p>`
+    });
+}
+
+// Send OTP for user registration
+exports.sendRegistrationOtp = async (req, res) => {
     try {
         const { name, email, password } = req.body;
+        const normalizedEmail = (email || '').trim().toLowerCase();
 
         // Validate input
-        if (!name || !email || !password) {
+        if (!name || !normalizedEmail || !password) {
             return res.status(400).json({ success: false, message: 'All fields are required' });
         }
 
-        const verification = await verifyEmailAddress(email);
-        if (!verification.isValidSyntax) {
-            return res.status(400).json({ success: false, message: 'Please enter a valid email format' });
-        }
-
-        if (!verification.hasMxRecords) {
-            return res.status(400).json({ success: false, message: 'Email domain cannot receive messages' });
-        }
-
-        if (verification.exists === false) {
-            return res.status(400).json({ success: false, message: 'This email mailbox does not appear to exist' });
-        }
-
         // Check if user already exists
-        const [existingUser] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        const [existingUser] = await db.query('SELECT * FROM users WHERE email = ?', [normalizedEmail]);
         if (existingUser.length > 0) {
             return res.status(400).json({ success: false, message: 'User already exists with this email' });
         }
 
-        // Hash password
+        await ensureOtpTable();
+
+        const otp = generateOtp();
         const hashedPassword = await bcrypt.hash(password, 10);
+        const expiryMinutes = Number.isFinite(OTP_EXPIRY_MINUTES) ? OTP_EXPIRY_MINUTES : 10;
+
+        await db.query(
+            `INSERT INTO email_otps (email, name, password_hash, otp_code, expires_at)
+             VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))
+             ON DUPLICATE KEY UPDATE
+                name = VALUES(name),
+                password_hash = VALUES(password_hash),
+                otp_code = VALUES(otp_code),
+                expires_at = VALUES(expires_at),
+                created_at = CURRENT_TIMESTAMP`,
+            [normalizedEmail, name, hashedPassword, otp, expiryMinutes]
+        );
+
+        try {
+            await sendOtpMail(name, normalizedEmail, otp);
+        } catch (mailError) {
+            await db.query('DELETE FROM email_otps WHERE email = ?', [normalizedEmail]);
+            throw mailError;
+        }
+
+        res.json({
+            success: true,
+            message: `OTP sent to ${normalizedEmail}. It expires in ${expiryMinutes} minutes.`
+        });
+
+    } catch (error) {
+        console.error('Send OTP error:', error);
+        res.status(500).json({ success: false, message: 'Unable to send OTP email. Check SMTP configuration.' });
+    }
+};
+
+// Verify OTP and create user account
+exports.verifyRegistrationOtp = async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        const normalizedEmail = (email || '').trim().toLowerCase();
+
+        if (!normalizedEmail || !otp) {
+            return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+        }
+
+        await ensureOtpTable();
+
+        const [otpRows] = await db.query('SELECT * FROM email_otps WHERE email = ?', [normalizedEmail]);
+        if (otpRows.length === 0) {
+            return res.status(400).json({ success: false, message: 'No OTP request found for this email' });
+        }
+
+        const otpRecord = otpRows[0];
+        if (new Date(otpRecord.expires_at) < new Date()) {
+            await db.query('DELETE FROM email_otps WHERE email = ?', [normalizedEmail]);
+            return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
+        }
+
+        if (String(otpRecord.otp_code) !== String(otp).trim()) {
+            return res.status(400).json({ success: false, message: 'Invalid OTP code' });
+        }
+
+        const [existingUser] = await db.query('SELECT * FROM users WHERE email = ?', [normalizedEmail]);
+        if (existingUser.length > 0) {
+            await db.query('DELETE FROM email_otps WHERE email = ?', [normalizedEmail]);
+            return res.status(400).json({ success: false, message: 'User already exists with this email' });
+        }
 
         // Create user
         const [result] = await db.query(
             'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-            [name, email, hashedPassword, 'user']
+            [otpRecord.name, normalizedEmail, otpRecord.password_hash, 'user']
         );
 
         // Assign free subscription to new user
@@ -47,6 +153,8 @@ exports.register = async (req, res) => {
             [result.insertId, 'active']
         );
 
+        await db.query('DELETE FROM email_otps WHERE email = ?', [normalizedEmail]);
+
         res.status(201).json({ 
             success: true, 
             message: 'User registered successfully',
@@ -54,42 +162,17 @@ exports.register = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Registration error:', error);
-        res.status(500).json({ success: false, message: 'Server error during registration' });
+        console.error('Verify OTP error:', error);
+        res.status(500).json({ success: false, message: 'Server error during OTP verification' });
     }
 };
 
-// Verify Email (Real-Time)
-exports.verifyEmail = async (req, res) => {
-    try {
-        const { email } = req.body;
-
-        if (!email) {
-            return res.status(400).json({ success: false, message: 'Email is required' });
-        }
-
-        const verification = await verifyEmailAddress(email);
-
-        let message = 'Email looks valid';
-        if (!verification.isValidSyntax) {
-            message = 'Invalid email format';
-        } else if (!verification.hasMxRecords) {
-            message = 'This domain is not configured to receive emails';
-        } else if (verification.exists === false) {
-            message = 'Mailbox could not be verified as active';
-        } else if (!verification.isApiCheckPerformed) {
-            message = 'Email domain is valid';
-        }
-
-        return res.json({
-            success: true,
-            message,
-            verification
-        });
-    } catch (error) {
-        console.error('Verify email error:', error);
-        return res.status(500).json({ success: false, message: 'Server error while verifying email' });
-    }
+// Legacy route kept for compatibility
+exports.register = async (req, res) => {
+    return res.status(400).json({
+        success: false,
+        message: 'Direct registration is disabled. Request OTP first and verify it to complete signup.'
+    });
 };
 
 // User Login

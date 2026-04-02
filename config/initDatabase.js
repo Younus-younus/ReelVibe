@@ -127,6 +127,20 @@ async function initializeDatabase() {
         `);
         console.log('✅ Watch History table created');
 
+        // Create Email OTP table
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS email_otps (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                otp_code VARCHAR(6) NOT NULL,
+                expires_at DATETIME NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('✅ Email OTP table created');
+
         // Insert default subscription plans
         await connection.query(`
             INSERT IGNORE INTO subscription_plans (id, name, price, description) VALUES

@@ -2,13 +2,17 @@
 const API_URL = '/api';
 
 const registerForm = document.getElementById('registerForm');
-const emailInput = document.getElementById('email');
 const emailStatus = document.getElementById('emailStatus');
 const errorDiv = document.getElementById('errorMessage');
+const otpGroup = document.getElementById('otpGroup');
+const otpInput = document.getElementById('otp');
+const submitBtn = document.getElementById('registerSubmitBtn');
+const nameInput = document.getElementById('name');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+const confirmPasswordInput = document.getElementById('confirmPassword');
 
-let lastVerifiedEmail = null;
-let lastVerification = null;
-let verificationRequestId = 0;
+let otpSent = false;
 
 function setEmailStatus(message, state = 'info') {
     emailStatus.textContent = message || '';
@@ -19,74 +23,18 @@ function setEmailStatus(message, state = 'info') {
     }
 }
 
-async function verifyEmail(email, showLoading = true) {
-    const trimmedEmail = (email || '').trim();
-    if (!trimmedEmail) {
-        setEmailStatus('');
-        return null;
-    }
+function updateOtpUiState() {
+    otpGroup.classList.toggle('show', otpSent);
+    otpInput.required = otpSent;
+    submitBtn.textContent = otpSent ? 'Verify OTP & Sign Up' : 'Send OTP';
 
-    if (trimmedEmail === lastVerifiedEmail && lastVerification) {
-        return lastVerification;
-    }
-
-    verificationRequestId += 1;
-    const currentRequestId = verificationRequestId;
-
-    if (showLoading) {
-        setEmailStatus('Checking email...', 'loading');
-    }
-
-    try {
-        const response = await fetch(`${API_URL}/auth/verify-email`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ email: trimmedEmail })
-        });
-
-        const data = await response.json();
-        if (currentRequestId !== verificationRequestId) {
-            return null;
-        }
-
-        if (!response.ok || !data.success) {
-            setEmailStatus(data.message || 'Email verification failed', 'error');
-            return null;
-        }
-
-        const verification = data.verification;
-        lastVerifiedEmail = trimmedEmail;
-        lastVerification = verification;
-
-        if (!verification.isValidSyntax || !verification.hasMxRecords || verification.exists === false) {
-            setEmailStatus(data.message || 'Please enter a valid, reachable email address', 'error');
-        } else if (!verification.isApiCheckPerformed) {
-            setEmailStatus(data.message || 'Email domain is valid', 'info');
-        } else {
-            setEmailStatus('Email verified successfully', 'success');
-        }
-
-        return verification;
-    } catch (error) {
-        console.error('Email verification error:', error);
-        if (currentRequestId === verificationRequestId) {
-            setEmailStatus('Could not verify email right now', 'error');
-        }
-        return null;
-    }
+    nameInput.readOnly = otpSent;
+    emailInput.readOnly = otpSent;
+    passwordInput.readOnly = otpSent;
+    confirmPasswordInput.readOnly = otpSent;
 }
 
-emailInput.addEventListener('input', () => {
-    lastVerifiedEmail = null;
-    lastVerification = null;
-    setEmailStatus('');
-});
-
-emailInput.addEventListener('blur', async () => {
-    await verifyEmail(emailInput.value);
-});
+updateOtpUiState();
 
 // Register Form Handler
 registerForm.addEventListener('submit', async (e) => {
@@ -95,49 +43,50 @@ registerForm.addEventListener('submit', async (e) => {
     errorDiv.textContent = '';
     errorDiv.classList.remove('show');
 
-    const name = document.getElementById('name').value;
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
+    const name = nameInput.value;
+    const email = emailInput.value;
+    const password = passwordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
 
-    // Validate passwords match
-    if (password !== confirmPassword) {
-        errorDiv.textContent = 'Passwords do not match';
-        errorDiv.classList.add('show');
-        return;
-    }
-
-    const verification = await verifyEmail(email, false);
-    if (!verification) {
-        errorDiv.textContent = 'Unable to verify your email right now. Please try again.';
-        errorDiv.classList.add('show');
-        return;
-    }
-
-    if (!verification.isValidSyntax || !verification.hasMxRecords || verification.exists === false) {
-        errorDiv.textContent = 'Please provide an active email address before signing up.';
-        errorDiv.classList.add('show');
-        return;
+    if (!otpSent) {
+        if (password !== confirmPassword) {
+            errorDiv.textContent = 'Passwords do not match';
+            errorDiv.classList.add('show');
+            return;
+        }
     }
     
     try {
-        const response = await fetch(`${API_URL}/auth/register`, {
+        const endpoint = otpSent ? `${API_URL}/auth/verify-registration-otp` : `${API_URL}/auth/send-registration-otp`;
+        const payload = otpSent
+            ? { email, otp: otpInput.value }
+            : { name, email, password };
+
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ name, email, password })
+            body: JSON.stringify(payload)
         });
         
         const data = await response.json();
         
-        if (data.success) {
-            alert('Registration successful! Please login.');
-            window.location.href = '/login';
-        } else {
+        if (!data.success) {
             errorDiv.textContent = data.message;
             errorDiv.classList.add('show');
+            return;
         }
+
+        if (!otpSent) {
+            otpSent = true;
+            updateOtpUiState();
+            setEmailStatus(data.message || 'OTP sent. Please check your email.', 'success');
+            return;
+        }
+
+        alert('Registration successful! Please login.');
+        window.location.href = '/login';
     } catch (error) {
         console.error('Registration error:', error);
         errorDiv.textContent = 'An error occurred. Please try again.';

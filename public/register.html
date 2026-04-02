@@ -29,6 +29,10 @@
                         <input type="email" id="email" name="email" required placeholder="Enter your email">
                         <div id="emailStatus" class="email-status"></div>
                     </div>
+                    <div class="form-group otp-group" id="otpGroup">
+                        <label for="otp">Enter OTP</label>
+                        <input type="text" id="otp" name="otp" maxlength="6" placeholder="Enter 6-digit OTP">
+                    </div>
                     <div class="form-group">
                         <label for="password">Password</label>
                         <input type="password" id="password" name="password" required placeholder="Create a password">
@@ -38,7 +42,7 @@
                         <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Confirm your password">
                     </div>
                     <div id="errorMessage" class="error-message"></div>
-                    <button type="submit" class="btn btn-danger btn-block">Sign Up</button>
+                    <button type="submit" id="registerSubmitBtn" class="btn btn-danger btn-block">Send OTP</button>
                 </form>
                 <div class="auth-footer">
                     <p>Already have an account? <a href="/login">Sign in</a></p>

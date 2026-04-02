@@ -393,6 +393,14 @@ body {
     color: var(--text-secondary);
 }
 
+.otp-group {
+    display: none;
+}
+
+.otp-group.show {
+    display: block;
+}
+
 .auth-footer {
     margin-top: 2rem;
     text-align: center;

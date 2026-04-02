@@ -6,7 +6,8 @@ const { verifyToken } = require('../middleware/auth');
 // Public routes
 router.post('/register', authController.register);
 router.post('/login', authController.login);
-router.post('/verify-email', authController.verifyEmail);
+router.post('/send-registration-otp', authController.sendRegistrationOtp);
+router.post('/verify-registration-otp', authController.verifyRegistrationOtp);
 
 // Protected routes
 router.get('/profile', verifyToken, authController.getProfile);

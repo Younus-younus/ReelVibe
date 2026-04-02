@@ -10,7 +10,7 @@ A full-stack streaming platform for movies and music with user authentication, r
 - JWT-based authentication
 - Password hashing with bcrypt
 - Role-based access control (Admin/User)
-- Real-time email validation (syntax + MX + optional mailbox check via API)
+- OTP-based signup verification via email
 
 ### User Dashboard
 - Browse Movies & Music
@@ -48,11 +48,18 @@ npm install
 - Create a database named `reelvibe`
 - Update `.env` file with your database credentials
 
-Email verification options in `.env`:
-- `EMAIL_VERIFICATION_PROVIDER=abstract`
-- `EMAIL_VERIFICATION_API_KEY=your_key_here`
+OTP email options in `.env`:
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM` (optional; falls back to `SMTP_USER`)
+- `OTP_EXPIRY_MINUTES`
 
-If `EMAIL_VERIFICATION_API_KEY` is empty, the app still validates syntax and MX records, but mailbox-level checks are skipped.
+Users now complete registration in 2 steps:
+1. Submit name, email, and password to receive an OTP by email.
+2. Enter OTP to verify and create the account.
 
 3. Initialize database:
 ```bash
