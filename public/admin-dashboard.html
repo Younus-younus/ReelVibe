@@ -125,7 +125,7 @@
                 <input type="hidden" id="movieId" name="movieId">
                 <div class="form-group">
                     <label for="movieTitle">Title *</label>
-                    <input type="text" id="movieTitle" name="title" required>
+                    <input type="text" id="movieTitle" name="title" required pattern=".*\S.*" title="This field cannot be only spaces">
                 </div>
                 <div class="form-group">
                     <label for="movieDescription">Description</label>
@@ -148,7 +148,7 @@
                     </div>
                     <div class="form-group">
                         <label for="movieSubscription">Subscription Required</label>
-                        <select id="movieSubscription" name="subscription_required">
+                        <select id="movieSubscription" name="subscription_required" style="background-color: gray;">
                             <option value="free">Free</option>
                             <option value="premium">Premium</option>
                         </select>
@@ -179,7 +179,7 @@
                 <input type="hidden" id="musicId" name="musicId">
                 <div class="form-group">
                     <label for="musicTitle">Title *</label>
-                    <input type="text" id="musicTitle" name="title" required>
+                    <input type="text" id="musicTitle" name="title" required pattern=".*\S.*" title="This field cannot be only spaces">
                 </div>
                 <div class="form-group">
                     <label for="musicArtist">Artist</label>
@@ -192,7 +192,7 @@
                     </div>
                     <div class="form-group">
                         <label for="musicSubscription">Subscription Required</label>
-                        <select id="musicSubscription" name="subscription_required">
+                        <select id="musicSubscription" name="subscription_required" style="background-color: gray;">
                             <option value="free">Free</option>
                             <option value="premium">Premium</option>
                         </select>

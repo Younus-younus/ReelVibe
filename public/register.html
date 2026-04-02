@@ -22,11 +22,11 @@
                 <form id="registerForm">
                     <div class="form-group">
                         <label for="name">Full Name</label>
-                        <input type="text" id="name" name="name" required placeholder="Enter your full name">
+                        <input type="text" id="name" name="name" required pattern=".*\S.*" title="This field cannot be only spaces" placeholder="Enter your full name">
                     </div>
                     <div class="form-group">
                         <label for="email">Email</label>
-                        <input type="email" id="email" name="email" required placeholder="Enter your email">
+                        <input type="email" id="email" name="email" required pattern=".*\S.*" title="This field cannot be only spaces" placeholder="Enter your email">
                         <div id="emailStatus" class="email-status"></div>
                     </div>
                     <div class="form-group otp-group" id="otpGroup">
@@ -35,11 +35,11 @@
                     </div>
                     <div class="form-group">
                         <label for="password">Password</label>
-                        <input type="password" id="password" name="password" required placeholder="Create a password">
+                        <input type="password" id="password" name="password" required pattern=".*\S.*" title="This field cannot be only spaces" placeholder="Create a password">
                     </div>
                     <div class="form-group">
                         <label for="confirmPassword">Confirm Password</label>
-                        <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Confirm your password">
+                        <input type="password" id="confirmPassword" name="confirmPassword" required pattern=".*\S.*" title="This field cannot be only spaces" placeholder="Confirm your password">
                     </div>
                     <div id="errorMessage" class="error-message"></div>
                     <button type="submit" id="registerSubmitBtn" class="btn btn-danger btn-block">Send OTP</button>

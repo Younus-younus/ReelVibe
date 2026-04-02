@@ -62,10 +62,12 @@ async function sendOtpMail(name, email, otp) {
 exports.sendRegistrationOtp = async (req, res) => {
     try {
         const { name, email, password } = req.body;
+        const normalizedName = (name || '').trim();
         const normalizedEmail = (email || '').trim().toLowerCase();
+        const normalizedPassword = String(password || '').trim();
 
         // Validate input
-        if (!name || !normalizedEmail || !password) {
+        if (!normalizedName || !normalizedEmail || !normalizedPassword) {
             return res.status(400).json({ success: false, message: 'All fields are required' });
         }
 
@@ -90,11 +92,11 @@ exports.sendRegistrationOtp = async (req, res) => {
                 otp_code = VALUES(otp_code),
                 expires_at = VALUES(expires_at),
                 created_at = CURRENT_TIMESTAMP`,
-            [normalizedEmail, name, hashedPassword, otp, expiryMinutes]
+            [normalizedEmail, normalizedName, hashedPassword, otp, expiryMinutes]
         );
 
         try {
-            await sendOtpMail(name, normalizedEmail, otp);
+            await sendOtpMail(normalizedName, normalizedEmail, otp);
         } catch (mailError) {
             await db.query('DELETE FROM email_otps WHERE email = ?', [normalizedEmail]);
             throw mailError;
@@ -116,8 +118,9 @@ exports.verifyRegistrationOtp = async (req, res) => {
     try {
         const { email, otp } = req.body;
         const normalizedEmail = (email || '').trim().toLowerCase();
+        const normalizedOtp = String(otp || '').trim();
 
-        if (!normalizedEmail || !otp) {
+        if (!normalizedEmail || !normalizedOtp) {
             return res.status(400).json({ success: false, message: 'Email and OTP are required' });
         }
 
@@ -134,7 +137,7 @@ exports.verifyRegistrationOtp = async (req, res) => {
             return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
         }
 
-        if (String(otpRecord.otp_code) !== String(otp).trim()) {
+        if (String(otpRecord.otp_code) !== normalizedOtp) {
             return res.status(400).json({ success: false, message: 'Invalid OTP code' });
         }
 
@@ -182,14 +185,16 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
+        const normalizedEmail = (email || '').trim().toLowerCase();
+        const normalizedPassword = String(password || '').trim();
 
         // Validate input
-        if (!email || !password) {
+        if (!normalizedEmail || !normalizedPassword) {
             return res.status(400).json({ success: false, message: 'Email and password are required' });
         }
 
         // Find user
-        const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        const [users] = await db.query('SELECT * FROM users WHERE email = ?', [normalizedEmail]);
         if (users.length === 0) {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
@@ -260,12 +265,18 @@ exports.updateProfile = async (req, res) => {
     try {
         const { name, email } = req.body;
         const userId = req.user.id;
+        const normalizedName = (name || '').trim();
+        const normalizedEmail = (email || '').trim().toLowerCase();
+
+        if (!normalizedName || !normalizedEmail) {
+            return res.status(400).json({ success: false, message: 'Name and email are required' });
+        }
 
         // Check if email is already taken by another user
-        if (email) {
+        if (normalizedEmail) {
             const [existingUser] = await db.query(
                 'SELECT * FROM users WHERE email = ? AND id != ?',
-                [email, userId]
+                [normalizedEmail, userId]
             );
             if (existingUser.length > 0) {
                 return res.status(400).json({ success: false, message: 'Email already in use' });
@@ -275,7 +286,7 @@ exports.updateProfile = async (req, res) => {
         // Update user
         await db.query(
             'UPDATE users SET name = ?, email = ? WHERE id = ?',
-            [name || req.user.name, email || req.user.email, userId]
+            [normalizedName, normalizedEmail, userId]
         );
 
         res.json({ success: true, message: 'Profile updated successfully' });
@@ -291,8 +302,10 @@ exports.changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
         const userId = req.user.id;
+        const normalizedCurrentPassword = String(currentPassword || '').trim();
+        const normalizedNewPassword = String(newPassword || '').trim();
 
-        if (!currentPassword || !newPassword) {
+        if (!normalizedCurrentPassword || !normalizedNewPassword) {
             return res.status(400).json({ success: false, message: 'All fields are required' });
         }
 

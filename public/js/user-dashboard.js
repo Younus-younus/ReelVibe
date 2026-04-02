@@ -3,6 +3,12 @@ const API_URL = '/api';
 let token = localStorage.getItem('token');
 let currentUser = JSON.parse(localStorage.getItem('user'));
 let userSubscriptionPlan = 'free'; // Global variable to store user's subscription plan
+let movieCatalog = [];
+let musicCatalog = [];
+let movieGenres = [];
+let musicGenres = [];
+let activePlayerKey = null;
+let searchDebounceTimer = null;
 
 // Check authentication
 if (!token || !currentUser) {
@@ -127,14 +133,32 @@ function setupEventListeners() {
         performSearch();
     });
     
-    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+    document.getElementById('searchInput').addEventListener('input', handleSearchInput);
+    document.getElementById('searchInput').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
+            e.preventDefault();
             performSearch();
+        }
+    });
+    document.getElementById('searchInput').addEventListener('focus', handleSearchInput);
+    document.getElementById('backToBrowseBtn').addEventListener('click', () => {
+        document.getElementById('searchInput').value = '';
+        clearSearchSuggestions();
+        switchSection('browse');
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        document.querySelector('.nav-link[data-section="browse"]')?.classList.add('active');
+    });
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-box')) {
+            clearSearchSuggestions();
         }
     });
     
     // Filters
-    document.getElementById('filterType').addEventListener('change', loadContent);
+    document.getElementById('filterType').addEventListener('change', () => {
+        updateBrowseGenreOptions();
+        loadContent();
+    });
     document.getElementById('filterGenre').addEventListener('change', loadContent);
     document.getElementById('movieGenreFilter').addEventListener('change', () => loadMovies());
     document.getElementById('musicGenreFilter').addEventListener('change', () => loadMusic());
@@ -158,6 +182,9 @@ function switchSection(section) {
         case 'browse':
             document.getElementById('browseSection').classList.add('active');
             loadContent();
+            break;
+        case 'searchResults':
+            document.getElementById('searchResultsSection').classList.add('active');
             break;
         case 'movies':
             document.getElementById('moviesSection').classList.add('active');
@@ -256,28 +283,55 @@ async function loadContent() {
     const genre = document.getElementById('filterGenre').value;
     
     try {
-        let content = [];
-        
-        if (filterType === 'all' || filterType === 'movies') {
-            const movies = await fetchMovies(genre);
-            content.push(...movies.map(m => ({ ...m, type: 'movie' })));
+        if (filterType === 'all') {
+            const [movies, music] = await Promise.all([fetchMovies(genre), fetchMusic(genre)]);
+
+            if (movies.length === 0 && music.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No content available</p></div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="split-content-layout">
+                    <section class="split-content-section">
+                        <h3 class="split-section-title">Movies</h3>
+                        ${movies.length > 0
+                            ? `<div class="content-grid split-grid split-movie-grid">${movies.map(item => createContentCard({ ...item, type: 'movie' })).join('')}</div>`
+                            : '<div class="empty-state split-empty"><p>No movies found</p></div>'}
+                    </section>
+                    <section class="split-content-section">
+                        <h3 class="split-section-title">Music</h3>
+                        ${music.length > 0
+                            ? `<div class="content-grid split-grid split-music-grid">${music.map(item => createContentCard({ ...item, type: 'music' })).join('')}</div>`
+                            : '<div class="empty-state split-empty"><p>No music found</p></div>'}
+                    </section>
+                </div>
+            `;
+
+            container.querySelectorAll('.split-movie-grid .content-card').forEach((card, index) => {
+                card.addEventListener('click', () => playContent({ ...movies[index], type: 'movie' }));
+            });
+
+            container.querySelectorAll('.split-music-grid .content-card').forEach((card, index) => {
+                card.addEventListener('click', () => playContent({ ...music[index], type: 'music' }));
+            });
+
+            return;
         }
-        
-        if (filterType === 'all' || filterType === 'music') {
-            const music = await fetchMusic(genre);
-            content.push(...music.map(m => ({ ...m, type: 'music' })));
-        }
-        
-        if (content.length === 0) {
+
+        const items = filterType === 'movies'
+            ? (await fetchMovies(genre)).map(item => ({ ...item, type: 'movie' }))
+            : (await fetchMusic(genre)).map(item => ({ ...item, type: 'music' }));
+
+        if (items.length === 0) {
             container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No content available</p></div>';
             return;
         }
-        
-        container.innerHTML = content.map(item => createContentCard(item)).join('');
-        
-        // Add click handlers
+
+        container.innerHTML = items.map(item => createContentCard(item)).join('');
+
         container.querySelectorAll('.content-card').forEach((card, index) => {
-            card.addEventListener('click', () => playContent(content[index]));
+            card.addEventListener('click', () => playContent(items[index]));
         });
     } catch (error) {
         console.error('Error loading content:', error);
@@ -356,6 +410,14 @@ async function fetchMovies(genre = '') {
     if (data.userPlan) {
         userSubscriptionPlan = data.userPlan;
     }
+
+    if (!genre && data.success) {
+        movieCatalog = (data.movies || []).map(item => ({
+            ...item,
+            type: 'movie',
+            subscription_required: normalizeSubscriptionPlan(item.subscription_required)
+        }));
+    }
     
     // Load genres for filter
     const genreResponse = await fetch(`${API_URL}/movies/genres`, {
@@ -363,7 +425,9 @@ async function fetchMovies(genre = '') {
     });
     const genreData = await genreResponse.json();
     if (genreData.success) {
-        updateGenreFilters('movie', genreData.genres);
+        movieGenres = (genreData.genres || []).filter(Boolean);
+        updateGenreFilters('movie', movieGenres);
+        updateBrowseGenreOptions();
     }
     
     return data.success ? data.movies : [];
@@ -381,6 +445,14 @@ async function fetchMusic(genre = '') {
     if (data.userPlan) {
         userSubscriptionPlan = data.userPlan;
     }
+
+    if (!genre && data.success) {
+        musicCatalog = (data.music || []).map(item => ({
+            ...item,
+            type: 'music',
+            subscription_required: normalizeSubscriptionPlan(item.subscription_required)
+        }));
+    }
     
     // Load genres for filter
     const genreResponse = await fetch(`${API_URL}/music/genres`, {
@@ -388,7 +460,9 @@ async function fetchMusic(genre = '') {
     });
     const genreData = await genreResponse.json();
     if (genreData.success) {
-        updateGenreFilters('music', genreData.genres);
+        musicGenres = (genreData.genres || []).filter(Boolean);
+        updateGenreFilters('music', musicGenres);
+        updateBrowseGenreOptions();
     }
     
     return data.success ? data.music : [];
@@ -396,30 +470,278 @@ async function fetchMusic(genre = '') {
 
 // Update genre filters
 function updateGenreFilters(type, genres) {
-    const filterIds = type === 'movie' 
-        ? ['filterGenre', 'movieGenreFilter']
-        : ['filterGenre', 'musicGenreFilter'];
-    
-    filterIds.forEach(id => {
-        const select = document.getElementById(id);
-        if (select && select.options.length <= 1) {
-            genres.forEach(genre => {
-                const option = document.createElement('option');
-                option.value = genre;
-                option.textContent = genre;
-                select.appendChild(option);
-            });
-        }
+    const targetId = type === 'movie' ? 'movieGenreFilter' : 'musicGenreFilter';
+    setGenreOptions(targetId, genres);
+}
+
+function setGenreOptions(selectId, genres) {
+    const select = document.getElementById(selectId);
+    if (!select) {
+        return;
+    }
+
+    const previousValue = select.value;
+    select.innerHTML = '<option value="">All Genres</option>';
+
+    [...new Set(genres)].forEach(genre => {
+        const option = document.createElement('option');
+        option.value = genre;
+        option.textContent = genre;
+        select.appendChild(option);
     });
+
+    if ([...select.options].some(option => option.value === previousValue)) {
+        select.value = previousValue;
+    }
+}
+
+function updateBrowseGenreOptions() {
+    const filterType = document.getElementById('filterType')?.value || 'all';
+    const browseSelect = document.getElementById('filterGenre');
+
+    if (!browseSelect) {
+        return;
+    }
+
+    if (filterType === 'movies') {
+        setGenreOptions('filterGenre', movieGenres);
+        return;
+    }
+
+    if (filterType === 'music') {
+        setGenreOptions('filterGenre', musicGenres);
+        return;
+    }
+
+    const allGenres = [...new Set([...movieGenres, ...musicGenres])];
+    setGenreOptions('filterGenre', allGenres);
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function normalizeSubscriptionPlan(plan) {
+    return plan === 'basic' ? 'premium' : (plan || 'free');
+}
+
+async function getContentCatalog(type) {
+    if (type === 'movie' && movieCatalog.length > 0) {
+        return movieCatalog;
+    }
+
+    if (type === 'music' && musicCatalog.length > 0) {
+        return musicCatalog;
+    }
+
+    const endpoint = type === 'movie' ? 'movies' : 'music';
+    const response = await fetch(`${API_URL}/${endpoint}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+
+    if (!data.success) {
+        return [];
+    }
+
+    const catalog = (data.movies || data.music || []).map(item => ({
+        ...item,
+        type,
+        subscription_required: normalizeSubscriptionPlan(item.subscription_required)
+    }));
+
+    if (type === 'movie') {
+        movieCatalog = catalog;
+    } else {
+        musicCatalog = catalog;
+    }
+
+    return catalog;
+}
+
+function getRecommendations(item, catalog) {
+    const normalizedGenre = (item.genre || '').toLowerCase();
+    const normalizedArtist = (item.artist || '').toLowerCase();
+
+    return catalog
+        .filter(candidate => candidate.id !== item.id)
+        .map(candidate => {
+            let score = 0;
+
+            if (normalizedGenre && (candidate.genre || '').toLowerCase() === normalizedGenre) {
+                score += 4;
+            }
+
+            if (normalizedArtist && (candidate.artist || '').toLowerCase() === normalizedArtist) {
+                score += 3;
+            }
+
+            if ((candidate.subscription_required || 'free') === (item.subscription_required || 'free')) {
+                score += 1;
+            }
+
+            if (candidate.created_at) {
+                score += 1;
+            }
+
+            return { ...candidate, score };
+        })
+        .sort((left, right) => {
+            if (right.score !== left.score) {
+                return right.score - left.score;
+            }
+
+            return new Date(right.created_at || 0) - new Date(left.created_at || 0);
+        })
+        .slice(0, 4);
+}
+
+function buildPlayerMetaRows(content, type) {
+    const rows = [];
+
+    if (type === 'movie') {
+        rows.push(
+            { label: 'Genre', value: content.genre || 'Unknown' },
+            { label: 'Release Year', value: content.release_year || 'N/A' },
+            { label: 'Rating', value: content.rating ? `⭐ ${content.rating}` : 'N/A' }
+        );
+    } else {
+        rows.push(
+            { label: 'Artist', value: content.artist || 'Unknown' },
+            { label: 'Genre', value: content.genre || 'Unknown' }
+        );
+    }
+
+    rows.push({
+        label: 'Access',
+        value: normalizeSubscriptionPlan(content.subscription_required).toUpperCase()
+    });
+
+    return rows;
+}
+
+function buildPlayerMarkup(content, type) {
+    const mediaMarkup = type === 'movie'
+        ? `
+            <video class="player-media" controls autoplay controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture oncontextmenu="return false;">
+                <source src="${content.video_url}" type="video/mp4">
+                Your browser does not support video playback.
+            </video>
+        `
+        : `
+            <div class="player-audio-cover-wrap">
+                <img class="player-audio-cover" src="${content.poster_url || 'https://via.placeholder.com/400x400?text=No+Image'}" alt="${escapeHtml(content.title)}" onerror="this.src='https://via.placeholder.com/400x400?text=No+Image'">
+            </div>
+            <audio class="player-media" controls autoplay controlsList="nodownload noplaybackrate noremoteplayback" oncontextmenu="return false;">
+                <source src="${content.audio_url}" type="audio/mpeg">
+                Your browser does not support audio playback.
+            </audio>
+        `;
+
+    const description = type === 'movie'
+        ? content.description || 'No description available for this title.'
+        : content.description || 'No track description is available yet.';
+
+    const metaRows = buildPlayerMetaRows(content, type).map(row => `
+        <div class="player-meta-item">
+            <span class="player-meta-label">${escapeHtml(row.label)}</span>
+            <span class="player-meta-value">${escapeHtml(row.value)}</span>
+        </div>
+    `).join('');
+
+    return `
+        <div class="player-header">
+            <div>
+                <div class="player-eyebrow">${type === 'movie' ? 'Movie' : 'Music'}</div>
+                <h2>${escapeHtml(content.title)}</h2>
+            </div>
+            <span class="subscription-badge player-access-badge">${escapeHtml(normalizeSubscriptionPlan(content.subscription_required))}</span>
+        </div>
+
+        <div class="player-media-card">
+            ${mediaMarkup}
+        </div>
+
+        <section class="player-details-card">
+            <h3>${type === 'movie' ? 'Description' : 'Track Details'}</h3>
+            <p class="player-description">${escapeHtml(description)}</p>
+            <div class="player-meta-grid">
+                ${metaRows}
+            </div>
+        </section>
+
+        <section class="recommendations-section">
+            <div class="recommendations-header">
+                <div>
+                    <h3>${type === 'movie' ? 'Recommended Movies' : 'Recommended Music'}</h3>
+                    <p>More titles picked from the same mood, genre, and recent catalog.</p>
+                </div>
+            </div>
+            <div id="playerRecommendations" class="recommendations-grid">
+                <div class="recommendations-loading">Loading recommendations...</div>
+            </div>
+        </section>
+    `;
+}
+
+async function loadPlayerRecommendations(content, type, playerKey) {
+    try {
+        const catalog = await getContentCatalog(type);
+        const recommendations = getRecommendations(content, catalog);
+        const recommendationsContainer = document.getElementById('playerRecommendations');
+
+        if (!recommendationsContainer || activePlayerKey !== playerKey) {
+            return;
+        }
+
+        if (recommendations.length === 0) {
+            recommendationsContainer.innerHTML = '<div class="recommendations-empty">No similar titles found yet.</div>';
+            return;
+        }
+
+        recommendationsContainer.innerHTML = recommendations.map(item => `
+            <button class="recommendation-card" type="button" data-id="${item.id}" data-type="${item.type}">
+                <img src="${item.poster_url || 'https://via.placeholder.com/180x240?text=No+Image'}" alt="${escapeHtml(item.title)}" onerror="this.src='https://via.placeholder.com/180x240?text=No+Image'">
+                <div class="recommendation-card-body">
+                    <h4>${escapeHtml(item.title)}</h4>
+                    <p>${escapeHtml(item.type === 'movie'
+                        ? `${item.genre || 'Unknown'} • ${item.release_year || 'N/A'}`
+                        : `${item.artist || 'Unknown'} • ${item.genre || 'Unknown'}`)}</p>
+                </div>
+            </button>
+        `).join('');
+
+        recommendationsContainer.querySelectorAll('.recommendation-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const selectedType = card.dataset.type;
+                const selectedId = Number(card.dataset.id);
+                const selectedCatalog = selectedType === 'movie' ? movieCatalog : musicCatalog;
+                const selectedItem = selectedCatalog.find(entry => Number(entry.id) === selectedId) || { id: selectedId, type: selectedType };
+                playContent(selectedItem);
+            });
+        });
+    } catch (error) {
+        console.error('Error loading recommendations:', error);
+        const recommendationsContainer = document.getElementById('playerRecommendations');
+        if (recommendationsContainer && activePlayerKey === playerKey) {
+            recommendationsContainer.innerHTML = '<div class="recommendations-empty">Unable to load recommendations right now.</div>';
+        }
+    }
 }
 
 // Create content card
 function createContentCard(item) {
     const posterUrl = item.poster_url || 'https://via.placeholder.com/200x300?text=No+Image';
     const title = item.title;
+    const subscriptionStatus = item.subscription_required === 'free' ? 'Free' : 'Premium';
     const meta = item.type === 'movie' 
-        ? `${item.genre || 'Unknown'} • ${item.release_year || 'N/A'} • ⭐ ${item.rating || 'N/A'}`
-        : `${item.artist || 'Unknown'} • ${item.genre || 'Unknown'}`;
+        ? `${item.genre || 'Unknown'} • ${item.release_year || 'N/A'} • ⭐ ${item.rating || 'N/A'} • ${subscriptionStatus}`
+        : `${item.artist || 'Unknown'} • ${item.genre || 'Unknown'} • ${subscriptionStatus}`;
     
     // Check if user has access to this content
     const requiredPlan = item.subscription_required === 'basic' ? 'premium' : item.subscription_required;
@@ -447,10 +769,133 @@ function createContentCard(item) {
     `;
 }
 
+function getSearchableCatalog() {
+    return [...movieCatalog, ...musicCatalog];
+}
+
+function normalizeSearchValue(value) {
+    return value.trim().toLowerCase();
+}
+
+function scoreSearchMatch(item, query) {
+    const title = (item.title || '').toLowerCase();
+    const artist = (item.artist || '').toLowerCase();
+    const genre = (item.genre || '').toLowerCase();
+    const description = (item.description || '').toLowerCase();
+
+    if (title === query) return 100;
+    if (title.startsWith(query)) return 80;
+
+    let score = 0;
+    if (title.includes(query)) score += 30;
+    if (artist.includes(query)) score += 25;
+    if (genre.includes(query)) score += 15;
+    if (description.includes(query)) score += 10;
+    return score;
+}
+
+function matchesSearchQuery(item, query) {
+    const normalizedQuery = normalizeSearchValue(query);
+    if (!normalizedQuery) return false;
+
+    const fields = [item.title, item.artist, item.genre, item.description];
+    return fields.some(field => String(field || '').toLowerCase().includes(normalizedQuery));
+}
+
+function renderSearchSuggestions(query) {
+    const suggestionsContainer = document.getElementById('searchSuggestions');
+    const normalizedQuery = normalizeSearchValue(query);
+
+    if (!suggestionsContainer || normalizedQuery.length < 1) {
+        clearSearchSuggestions();
+        return;
+    }
+
+    const suggestions = getSearchableCatalog()
+        .filter(item => matchesSearchQuery(item, normalizedQuery))
+        .map(item => ({
+            ...item,
+            score: scoreSearchMatch(item, normalizedQuery)
+        }))
+        .sort((left, right) => right.score - left.score)
+        .slice(0, 6);
+
+    if (suggestions.length === 0) {
+        suggestionsContainer.innerHTML = '<div class="search-suggestion-empty">No matches</div>';
+        suggestionsContainer.classList.add('show');
+        return;
+    }
+
+    suggestionsContainer.innerHTML = suggestions.map(item => `
+        <button type="button" class="search-suggestion" data-id="${item.id}" data-type="${item.type}">
+            <img src="${item.poster_url || 'https://via.placeholder.com/60x80?text=No+Image'}" alt="${escapeHtml(item.title)}" onerror="this.src='https://via.placeholder.com/60x80?text=No+Image'">
+            <div class="search-suggestion-text">
+                <strong>${escapeHtml(item.title)}</strong>
+                <span>${escapeHtml(item.type === 'movie'
+                    ? `${item.genre || 'Unknown'} • ${item.release_year || 'N/A'}`
+                    : `${item.artist || 'Unknown'} • ${item.genre || 'Unknown'}`)}</span>
+            </div>
+        </button>
+    `).join('');
+
+    suggestionsContainer.classList.add('show');
+
+    suggestionsContainer.querySelectorAll('.search-suggestion').forEach(button => {
+        button.addEventListener('click', () => {
+            const selectedType = button.dataset.type;
+            const selectedId = Number(button.dataset.id);
+            const selectedCatalog = selectedType === 'movie' ? movieCatalog : musicCatalog;
+            const selectedItem = selectedCatalog.find(entry => Number(entry.id) === selectedId);
+
+            if (selectedItem) {
+                document.getElementById('searchInput').value = selectedItem.title;
+                clearSearchSuggestions();
+                playContent(selectedItem);
+            }
+        });
+    });
+}
+
+function clearSearchSuggestions() {
+    const suggestionsContainer = document.getElementById('searchSuggestions');
+    if (!suggestionsContainer) {
+        return;
+    }
+
+    suggestionsContainer.classList.remove('show');
+    suggestionsContainer.innerHTML = '';
+}
+
+async function handleSearchInput() {
+    const query = document.getElementById('searchInput').value.trim();
+
+    clearTimeout(searchDebounceTimer);
+
+    if (!query) {
+        clearSearchSuggestions();
+        return;
+    }
+
+    if (movieCatalog.length === 0 || musicCatalog.length === 0) {
+        await ensureSearchCatalogsLoaded();
+    }
+
+    searchDebounceTimer = setTimeout(() => {
+        renderSearchSuggestions(query);
+    }, 150);
+}
+
+async function ensureSearchCatalogsLoaded() {
+    await Promise.all([
+        movieCatalog.length > 0 ? Promise.resolve(movieCatalog) : fetchMovies(),
+        musicCatalog.length > 0 ? Promise.resolve(musicCatalog) : fetchMusic()
+    ]);
+}
+
 // Play content
 async function playContent(item) {
     try {
-        const type = item.type;
+        const type = item.type === 'music' ? 'music' : 'movie';
         const endpoint = type === 'movie' ? 'movies' : 'music';
         
         const response = await fetch(`${API_URL}/${endpoint}/${item.id}`, {
@@ -474,29 +919,13 @@ async function playContent(item) {
         
         const content = data.movie || data.music;
         const playerContainer = document.getElementById('playerContainer');
-        
-        if (type === 'movie') {
-            playerContainer.innerHTML = `
-                <h2>${content.title}</h2>
-                <p>${content.description || ''}</p>
-                <video controls autoplay>
-                    <source src="${content.video_url}" type="video/mp4">
-                    Your browser does not support video playback.
-                </video>
-            `;
-        } else {
-            playerContainer.innerHTML = `
-                <h2>${content.title}</h2>
-                <p>Artist: ${content.artist || 'Unknown'}</p>
-                <img src="${content.poster_url}" alt="${content.title}" style="max-width: 400px; border-radius: 8px; margin: 1rem 0;">
-                <audio controls autoplay>
-                    <source src="${content.audio_url}" type="audio/mpeg">
-                    Your browser does not support audio playback.
-                </audio>
-            `;
-        }
+        const playerKey = `${type}-${content.id}`;
+        activePlayerKey = playerKey;
+        playerContainer.innerHTML = buildPlayerMarkup(content, type);
+        lockPlayerMediaControls(playerContainer);
         
         document.getElementById('playerModal').classList.add('show');
+        loadPlayerRecommendations(content, type, playerKey);
     } catch (error) {
         console.error('Error playing content:', error);
         alert('Error loading content');
@@ -507,12 +936,14 @@ async function playContent(item) {
 function closePlayer() {
     const modal = document.getElementById('playerModal');
     modal.classList.remove('show');
+    activePlayerKey = null;
     
     // Stop playback
     const video = modal.querySelector('video');
     const audio = modal.querySelector('audio');
     if (video) video.pause();
     if (audio) audio.pause();
+    document.getElementById('playerContainer').innerHTML = '';
 }
 
 // Load history
@@ -758,8 +1189,13 @@ async function cancelMembershipFromProfile() {
 async function updateProfile(e) {
     e.preventDefault();
     
-    const name = document.getElementById('profileName').value;
-    const email = document.getElementById('profileEmail').value;
+    const name = document.getElementById('profileName').value.trim();
+    const email = document.getElementById('profileEmail').value.trim();
+
+    if (!name || !email) {
+        alert('Name and email are required');
+        return;
+    }
     
     try {
         const response = await fetch(`${API_URL}/auth/profile`, {
@@ -794,6 +1230,11 @@ async function changePassword(e) {
     
     const currentPassword = document.getElementById('currentPassword').value;
     const newPassword = document.getElementById('newPassword').value;
+
+    if (!currentPassword.trim() || !newPassword.trim()) {
+        alert('All fields are required');
+        return;
+    }
     
     try {
         const response = await fetch(`${API_URL}/auth/change-password`, {
@@ -824,17 +1265,23 @@ async function performSearch() {
     const query = document.getElementById('searchInput').value.trim();
     if (!query) return;
     
-    switchSection('browse');
-    
-    const container = document.getElementById('browseContent');
+    clearSearchSuggestions();
+    switchSection('searchResults');
+    const container = document.getElementById('searchResultsContent');
+    const meta = document.getElementById('searchResultsMeta');
     container.innerHTML = '<div class="loading">Searching...</div>';
+    meta.textContent = `Searching for "${query}"`;
     
     try {
+        await ensureSearchCatalogsLoaded();
+
+        const encodedQuery = encodeURIComponent(query);
+
         const [moviesRes, musicRes] = await Promise.all([
-            fetch(`${API_URL}/movies?search=${query}`, {
+            fetch(`${API_URL}/movies?search=${encodedQuery}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             }),
-            fetch(`${API_URL}/music?search=${query}`, {
+            fetch(`${API_URL}/music?search=${encodedQuery}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
         ]);
@@ -848,11 +1295,13 @@ async function performSearch() {
         ];
         
         if (content.length === 0) {
-            container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔍</div><p>No results found for "${query}"</p></div>`;
+            container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔍</div><p>No results found for "${escapeHtml(query)}"</p></div>`;
+            meta.textContent = 'No results found';
             return;
         }
         
         container.innerHTML = content.map(item => createContentCard(item)).join('');
+        meta.textContent = `${content.length} result${content.length === 1 ? '' : 's'} found`;
         
         container.querySelectorAll('.content-card').forEach((card, index) => {
             card.addEventListener('click', () => playContent(content[index]));
@@ -860,7 +1309,20 @@ async function performSearch() {
     } catch (error) {
         console.error('Error searching:', error);
         container.innerHTML = '<div class="empty-state"><p>Error performing search</p></div>';
+        meta.textContent = 'Unable to load search results';
     }
+}
+
+function preventMediaContextMenu(event) {
+    event.preventDefault();
+}
+
+function lockPlayerMediaControls(container) {
+    container.querySelectorAll('video, audio').forEach(media => {
+        media.addEventListener('contextmenu', preventMediaContextMenu);
+        media.addEventListener('dragstart', preventMediaContextMenu);
+        media.setAttribute('controlsList', 'nodownload noplaybackrate noremoteplayback');
+    });
 }
 
 // Make subscribeToPlan available globally

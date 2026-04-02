@@ -9,8 +9,14 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     errorDiv.textContent = '';
     errorDiv.classList.remove('show');
     
-    const email = document.getElementById('email').value;
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
+
+    if (!email || !password.trim()) {
+        errorDiv.textContent = 'Email and password are required';
+        errorDiv.classList.add('show');
+        return;
+    }
     
     try {
         const response = await fetch(`${API_URL}/auth/login`, {

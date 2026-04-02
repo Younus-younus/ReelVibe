@@ -135,6 +135,11 @@ exports.getMovie = async (req, res) => {
 exports.addMovie = async (req, res) => {
     try {
         const { title, description, genre, release_year, rating, subscription_required } = req.body;
+        const normalizedTitle = (title || '').trim();
+
+        if (!normalizedTitle) {
+            return res.status(400).json({ success: false, message: 'Movie title is required' });
+        }
 
         // Validate required fields
         if (!title || title.trim() === '') {
@@ -150,7 +155,7 @@ exports.addMovie = async (req, res) => {
         const [result] = await db.query(
             `INSERT INTO movies (title, description, genre, release_year, rating, video_url, poster_url, subscription_required)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [title, description, genre, release_year, rating, video_url, poster_url, subscription_required || 'free']
+            [normalizedTitle, description, genre, release_year, rating, video_url, poster_url, subscription_required || 'free']
         );
 
         res.status(201).json({ 
@@ -177,8 +182,13 @@ exports.updateMovie = async (req, res) => {
         }
 
         // Use existing values as fallback if new values are not provided
-        const title = req.body.title !== undefined && req.body.title !== '' 
-            ? req.body.title 
+        const trimmedTitle = req.body.title !== undefined ? String(req.body.title).trim() : undefined;
+        if (trimmedTitle !== undefined && !trimmedTitle) {
+            return res.status(400).json({ success: false, message: 'Movie title cannot be empty' });
+        }
+
+        const title = trimmedTitle !== undefined
+            ? trimmedTitle
             : existing[0].title;
         const description = req.body.description !== undefined 
             ? req.body.description 

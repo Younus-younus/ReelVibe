@@ -500,6 +500,12 @@ async function loadMovieForEdit(movieId) {
 
 async function saveMovie(e) {
     e.preventDefault();
+
+    const movieTitle = document.getElementById('movieTitle').value.trim();
+    if (!movieTitle) {
+        alert('Movie title is required');
+        return;
+    }
     
     const formData = new FormData(e.target);
     const movieId = document.getElementById('movieId').value;
@@ -602,6 +608,12 @@ async function loadMusicForEdit(musicId) {
 
 async function saveMusic(e) {
     e.preventDefault();
+
+    const musicTitle = document.getElementById('musicTitle').value.trim();
+    if (!musicTitle) {
+        alert('Music title is required');
+        return;
+    }
     
     const formData = new FormData(e.target);
     const musicId = document.getElementById('musicId').value;

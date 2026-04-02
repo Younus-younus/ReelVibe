@@ -128,6 +128,11 @@ exports.getMusic = async (req, res) => {
 exports.addMusic = async (req, res) => {
     try {
         const { title, artist, genre, subscription_required } = req.body;
+        const normalizedTitle = (title || '').trim();
+
+        if (!normalizedTitle) {
+            return res.status(400).json({ success: false, message: 'Music title is required' });
+        }
 
         const audio_url = req.files?.audio ? `/uploads/audio/${req.files.audio[0].filename}` : null;
         const poster_url = req.files?.poster ? `/uploads/posters/${req.files.poster[0].filename}` : null;
@@ -135,7 +140,7 @@ exports.addMusic = async (req, res) => {
         const [result] = await db.query(
             `INSERT INTO music (title, artist, genre, audio_url, poster_url, subscription_required)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [title, artist, genre, audio_url, poster_url, subscription_required || 'free']
+            [normalizedTitle, artist, genre, audio_url, poster_url, subscription_required || 'free']
         );
 
         res.status(201).json({ 
@@ -161,8 +166,13 @@ exports.updateMusic = async (req, res) => {
         }
 
         // Use existing values as fallback if new values are not provided
-        const title = req.body.title !== undefined && req.body.title !== '' 
-            ? req.body.title 
+        const trimmedTitle = req.body.title !== undefined ? String(req.body.title).trim() : undefined;
+        if (trimmedTitle !== undefined && !trimmedTitle) {
+            return res.status(400).json({ success: false, message: 'Music title cannot be empty' });
+        }
+
+        const title = trimmedTitle !== undefined
+            ? trimmedTitle
             : existing[0].title;
         const artist = req.body.artist !== undefined 
             ? req.body.artist 

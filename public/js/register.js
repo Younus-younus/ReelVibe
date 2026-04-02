@@ -43,10 +43,22 @@ registerForm.addEventListener('submit', async (e) => {
     errorDiv.textContent = '';
     errorDiv.classList.remove('show');
 
-    const name = nameInput.value;
-    const email = emailInput.value;
+    const name = nameInput.value.trim();
+    const email = emailInput.value.trim();
     const password = passwordInput.value;
     const confirmPassword = confirmPasswordInput.value;
+
+    if (!otpSent && (!name || !email || !password.trim() || !confirmPassword.trim())) {
+        errorDiv.textContent = 'All fields are required';
+        errorDiv.classList.add('show');
+        return;
+    }
+
+    if (otpSent && !otpInput.value.trim()) {
+        errorDiv.textContent = 'OTP is required';
+        errorDiv.classList.add('show');
+        return;
+    }
 
     if (!otpSent) {
         if (password !== confirmPassword) {
@@ -59,7 +71,7 @@ registerForm.addEventListener('submit', async (e) => {
     try {
         const endpoint = otpSent ? `${API_URL}/auth/verify-registration-otp` : `${API_URL}/auth/send-registration-otp`;
         const payload = otpSent
-            ? { email, otp: otpInput.value }
+            ? { email, otp: otpInput.value.trim() }
             : { name, email, password };
 
         const response = await fetch(endpoint, {

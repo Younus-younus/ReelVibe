@@ -22,11 +22,11 @@
                 <form id="loginForm">
                     <div class="form-group">
                         <label for="email">Email</label>
-                        <input type="email" id="email" name="email" required placeholder="Enter your email">
+                        <input type="email" id="email" name="email" required pattern=".*\S.*" title="This field cannot be only spaces" placeholder="Enter your email">
                     </div>
                     <div class="form-group">
                         <label for="password">Password</label>
-                        <input type="password" id="password" name="password" required placeholder="Enter your password">
+                        <input type="password" id="password" name="password" required pattern=".*\S.*" title="This field cannot be only spaces" placeholder="Enter your password">
                     </div>
                     <div id="errorMessage" class="error-message"></div>
                     <button type="submit" class="btn btn-danger btn-block">Sign In</button>
