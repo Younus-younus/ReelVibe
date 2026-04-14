@@ -145,6 +145,10 @@ function setupEventListeners() {
     document.getElementById('closeMovieModal').addEventListener('click', closeMovieModal);
     document.getElementById('closeMusicModal').addEventListener('click', closeMusicModal);
     
+    // Modal cancel buttons
+    document.getElementById('cancelMovieBtn').addEventListener('click', closeMovieModal);
+    document.getElementById('cancelMusicBtn').addEventListener('click', closeMusicModal);
+    
     // Forms
     document.getElementById('movieForm').addEventListener('submit', saveMovie);
     document.getElementById('musicForm').addEventListener('submit', saveMusic);
@@ -252,7 +256,7 @@ async function loadMovies() {
                             <td>${movie.genre || 'N/A'}</td>
                             <td>${movie.release_year || 'N/A'}</td>
                             <td>${movie.rating || 'N/A'}</td>
-                            <td><span class="subscription-badge">${movie.subscription_required}</span></td>
+                            <td><span class="subscription-badge ${movie.subscription_required}">${movie.subscription_required}</span></td>
                             <td>
                                 <div class="action-buttons">
                                     <button class="btn btn-small btn-warning" onclick="editMovie(${movie.id})">Edit</button>
@@ -313,7 +317,7 @@ async function loadMusic() {
                             <td>${music.title}</td>
                             <td>${music.artist || 'N/A'}</td>
                             <td>${music.genre || 'N/A'}</td>
-                            <td><span class="subscription-badge">${music.subscription_required}</span></td>
+                            <td><span class="subscription-badge ${music.subscription_required}">${music.subscription_required}</span></td>
                             <td>
                                 <div class="action-buttons">
                                     <button class="btn btn-small btn-warning" onclick="editMusic(${music.id})">Edit</button>

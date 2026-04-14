@@ -810,6 +810,27 @@ body {
     background-color: rgba(255, 255, 255, 0.05);
 }
 
+/* Subscription Badge in Admin Table */
+.admin-table .subscription-badge {
+    position: static;
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    text-transform: capitalize;
+    font-weight: 600;
+}
+
+.admin-table .subscription-badge.free {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.admin-table .subscription-badge.premium {
+    background-color: #e50914;
+    color: white;
+}
+
 .action-buttons {
     display: flex;
     gap: 0.5rem;

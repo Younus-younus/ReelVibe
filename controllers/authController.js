@@ -31,13 +31,16 @@ function getMailTransporter() {
         throw new Error('SMTP credentials are not fully configured');
     }
 
+    // Normalize the password by removing spaces (common issue with copy-paste)
+    const cleanPassword = (SMTP_PASS || '').replace(/\s+/g, '');
+
     return nodemailer.createTransport({
         host: SMTP_HOST,
         port: Number(SMTP_PORT),
         secure: String(SMTP_SECURE || 'false').toLowerCase() === 'true',
         auth: {
             user: SMTP_USER,
-            pass: SMTP_PASS
+            pass: cleanPassword
         }
     });
 }

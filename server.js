@@ -96,6 +96,7 @@ app.listen(PORT, () => {
     
     🚀 Ready to stream!
     `);
+    console.log('\n👉 Click to open: http://localhost:' + PORT);
 });
 
 module.exports = app;

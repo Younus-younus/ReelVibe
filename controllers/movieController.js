@@ -136,6 +136,14 @@ exports.addMovie = async (req, res) => {
     try {
         const { title, description, genre, release_year, rating, subscription_required } = req.body;
 
+        // Validate required fields
+        if (!title || title.trim() === '') {
+            return res.status(400).json({ success: false, message: 'Title is required' });
+        }
+
+        console.log('Add movie request body:', req.body);
+        console.log('Add movie files:', req.files);
+
         const video_url = req.files?.video ? `/uploads/videos/${req.files.video[0].filename}` : null;
         const poster_url = req.files?.poster ? `/uploads/posters/${req.files.poster[0].filename}` : null;
 
@@ -152,8 +160,9 @@ exports.addMovie = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Add movie error:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('Add movie error:', error.message);
+        console.error('Add movie error stack:', error.stack);
+        res.status(500).json({ success: false, message: `Server error: ${error.message}` });
     }
 };
 
