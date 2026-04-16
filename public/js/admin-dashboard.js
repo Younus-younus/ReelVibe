@@ -144,8 +144,6 @@ function setupEventListeners() {
     // Modal close buttons
     document.getElementById('closeMovieModal').addEventListener('click', closeMovieModal);
     document.getElementById('closeMusicModal').addEventListener('click', closeMusicModal);
-    
-    // Modal cancel buttons
     document.getElementById('cancelMovieBtn').addEventListener('click', closeMovieModal);
     document.getElementById('cancelMusicBtn').addEventListener('click', closeMusicModal);
     
@@ -249,14 +247,18 @@ async function loadMovies() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${data.movies.map(movie => `
+                    ${data.movies.map(movie => {
+                        const subscriptionRaw = String(movie.subscription_required || movie.subscription_plan || 'free').toLowerCase();
+                        const subscriptionStatus = subscriptionRaw === 'free' ? 'Free' : 'Premium';
+                        const subscriptionClass = subscriptionRaw === 'free' ? 'table-badge--free' : 'table-badge--premium';
+                        return `
                         <tr>
                             <td>${movie.id}</td>
                             <td>${movie.title}</td>
                             <td>${movie.genre || 'N/A'}</td>
                             <td>${movie.release_year || 'N/A'}</td>
                             <td>${movie.rating || 'N/A'}</td>
-                            <td><span class="subscription-badge ${movie.subscription_required}">${movie.subscription_required}</span></td>
+                            <td><span class="table-badge ${subscriptionClass}">${subscriptionStatus}</span></td>
                             <td>
                                 <div class="action-buttons">
                                     <button class="btn btn-small btn-warning" onclick="editMovie(${movie.id})">Edit</button>
@@ -264,7 +266,8 @@ async function loadMovies() {
                                 </div>
                             </td>
                         </tr>
-                    `).join('')}
+                    `;
+                    }).join('')}
                 </tbody>
             </table>
         `;
@@ -311,13 +314,17 @@ async function loadMusic() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${data.music.map(music => `
+                    ${data.music.map(music => {
+                        const subscriptionRaw = String(music.subscription_required || music.subscription_plan || 'free').toLowerCase();
+                        const subscriptionStatus = subscriptionRaw === 'free' ? 'Free' : 'Premium';
+                        const subscriptionClass = subscriptionRaw === 'free' ? 'table-badge--free' : 'table-badge--premium';
+                        return `
                         <tr>
                             <td>${music.id}</td>
                             <td>${music.title}</td>
                             <td>${music.artist || 'N/A'}</td>
                             <td>${music.genre || 'N/A'}</td>
-                            <td><span class="subscription-badge ${music.subscription_required}">${music.subscription_required}</span></td>
+                            <td><span class="table-badge ${subscriptionClass}">${subscriptionStatus}</span></td>
                             <td>
                                 <div class="action-buttons">
                                     <button class="btn btn-small btn-warning" onclick="editMusic(${music.id})">Edit</button>
@@ -325,7 +332,8 @@ async function loadMusic() {
                                 </div>
                             </td>
                         </tr>
-                    `).join('')}
+                    `;
+                    }).join('')}
                 </tbody>
             </table>
         `;
@@ -364,17 +372,22 @@ async function loadUsers() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${data.users.map(user => `
+                    ${data.users.map(user => {
+                        const role = String(user.role || 'user').toLowerCase();
+                        const roleClass = role === 'admin' ? 'table-badge--admin' : 'table-badge--user';
+                        const planRaw = String(user.subscription_plan || 'free').toLowerCase();
+                        const planClass = planRaw === 'free' ? 'table-badge--free' : 'table-badge--premium';
+                        return `
                         <tr>
                             <td>${user.id}</td>
                             <td>${user.name}</td>
                             <td>${user.email}</td>
-                            <td><span class="subscription-badge">${user.role}</span></td>
-                            <td>${user.subscription_plan || 'None'}</td>
+                            <td><span class="table-badge ${roleClass}">${role}</span></td>
+                            <td><span class="table-badge ${planClass}">${planRaw}</span></td>
                             <td>${new Date(user.created_at).toLocaleDateString()}</td>
                             <td>
                                 <div class="action-buttons">
-                                    ${user.role === 'user' ? 
+                                    ${role === 'user' ? 
                                         `<button class="btn btn-small btn-success" onclick="promoteUser(${user.id})">Make Admin</button>` :
                                         `<button class="btn btn-small btn-warning" onclick="demoteUser(${user.id})">Remove Admin</button>`
                                     }
@@ -385,7 +398,8 @@ async function loadUsers() {
                                 </div>
                             </td>
                         </tr>
-                    `).join('')}
+                    `;
+                    }).join('')}
                 </tbody>
             </table>
         `;
@@ -433,7 +447,7 @@ async function loadSubscriptions() {
                             <td>${sub.plan_name}</td>
                             <td>${new Date(sub.start_date).toLocaleDateString()}</td>
                             <td>${sub.end_date ? new Date(sub.end_date).toLocaleDateString() : 'N/A'}</td>
-                            <td><span class="subscription-badge">${sub.status}</span></td>
+                            <td><span class="table-badge table-badge--status-${String(sub.status || '').toLowerCase()}">${sub.status}</span></td>
                             <td>
                                 <select onchange="updateSubscriptionStatus(${sub.id}, this.value)" class="filter-select">
                                     <option value="active" ${sub.status === 'active' ? 'selected' : ''}>Active</option>

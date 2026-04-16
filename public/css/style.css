@@ -167,6 +167,16 @@ body {
     display: block;
 }
 
+.modal-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.modal-form-actions .btn {
+    flex: 1;
+}
+
 /* Features Section */
 .features-section, .pricing-section {
     padding: 5rem 2rem;
@@ -430,16 +440,58 @@ body {
 /* Dashboard */
 .dashboard {
     min-height: 100vh;
-    background-color: var(--bg-dark);
+    background:
+        radial-gradient(circle at 12% 8%, rgba(229, 9, 20, 0.24), transparent 36%),
+        radial-gradient(circle at 88% 18%, rgba(66, 134, 244, 0.2), transparent 34%),
+        radial-gradient(circle at 48% 100%, rgba(255, 145, 0, 0.12), transparent 38%),
+        linear-gradient(150deg, #09090c 0%, #111116 48%, #09090d 100%);
+    background-attachment: fixed;
+    position: relative;
+}
+
+.dashboard::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+        radial-gradient(circle at 0 0, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        radial-gradient(circle at 40px 40px, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 80px 80px;
+    opacity: 0.22;
+    z-index: 0;
+}
+
+.dashboard::after {
+    content: '';
+    position: fixed;
+    width: 42vw;
+    height: 42vw;
+    min-width: 260px;
+    min-height: 260px;
+    right: -12vw;
+    bottom: -14vw;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(229, 9, 20, 0.26), rgba(229, 9, 20, 0));
+    filter: blur(10px);
+    z-index: 0;
+    animation: dashboardAmbientFloat 14s ease-in-out infinite alternate;
+}
+
+.dashboard > * {
+    position: relative;
+    z-index: 1;
 }
 
 .dashboard-nav {
-    background-color: var(--secondary-color);
+    background: linear-gradient(180deg, rgba(29, 25, 25, 0.96) 0%, rgba(23, 20, 20, 0.92) 100%);
     padding: 1rem 0;
     position: sticky;
     top: 0;
     z-index: 1000;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(6px);
 }
 
 .dashboard-nav.admin-nav {
@@ -727,9 +779,70 @@ body {
     gap: 1.5rem;
 }
 
+#moviesSection {
+    position: relative;
+    padding: 1.4rem;
+    border-radius: calc(var(--border-radius) + 8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background:
+        radial-gradient(circle at 16% -10%, rgba(229, 9, 20, 0.36), transparent 40%),
+        radial-gradient(circle at 85% 10%, rgba(31, 123, 255, 0.22), transparent 38%),
+        linear-gradient(155deg, rgba(10, 10, 14, 0.98) 0%, rgba(24, 24, 27, 0.96) 52%, rgba(13, 13, 17, 0.98) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 24px 36px rgba(0, 0, 0, 0.28);
+    overflow: hidden;
+    isolation: isolate;
+}
+
+#moviesSection::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 26px 100%;
+    opacity: 0.22;
+    pointer-events: none;
+    z-index: -1;
+}
+
+#moviesSection::after {
+    content: '';
+    position: absolute;
+    width: 340px;
+    height: 340px;
+    right: -130px;
+    bottom: -170px;
+    background: radial-gradient(circle, rgba(229, 9, 20, 0.32), rgba(229, 9, 20, 0));
+    filter: blur(4px);
+    pointer-events: none;
+    z-index: -1;
+}
+
+#moviesSection .section-header {
+    margin-bottom: 1.35rem;
+}
+
+#moviesSection .section-header h2 {
+    text-shadow: 0 3px 12px rgba(229, 9, 20, 0.28);
+}
+
+#moviesSection .content-card {
+    background: linear-gradient(180deg, rgba(32, 32, 35, 0.95), rgba(18, 18, 21, 0.94));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#moviesSection .content-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(229, 9, 20, 0.22);
+}
+
+#moviesSection .content-card-info {
+    background: linear-gradient(180deg, rgba(26, 26, 30, 0), rgba(26, 26, 30, 0.86));
+}
+
 .split-content-layout {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
     gap: 1.5rem;
     align-items: start;
 }
@@ -928,25 +1041,60 @@ body {
     background-color: rgba(255, 255, 255, 0.05);
 }
 
-/* Subscription Badge in Admin Table */
-.admin-table .subscription-badge {
-    position: static;
-    display: inline-block;
-    padding: 0.35rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    text-transform: capitalize;
-    font-weight: 600;
+.table-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.24rem 0.62rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    border: 1px solid transparent;
 }
 
-.admin-table .subscription-badge.free {
-    background-color: #4CAF50;
-    color: white;
+.table-badge--free {
+    background: rgba(46, 204, 113, 0.16);
+    color: #7ef2a8;
+    border-color: rgba(46, 204, 113, 0.36);
 }
 
-.admin-table .subscription-badge.premium {
-    background-color: #e50914;
-    color: white;
+.table-badge--premium {
+    background: rgba(229, 9, 20, 0.17);
+    color: #ff8a92;
+    border-color: rgba(229, 9, 20, 0.4);
+}
+
+.table-badge--admin {
+    background: rgba(255, 193, 7, 0.17);
+    color: #ffe083;
+    border-color: rgba(255, 193, 7, 0.45);
+}
+
+.table-badge--user {
+    background: rgba(49, 176, 255, 0.17);
+    color: #90d5ff;
+    border-color: rgba(49, 176, 255, 0.38);
+}
+
+.table-badge--status-active {
+    background: rgba(40, 167, 69, 0.2);
+    color: #6ef195;
+    border-color: rgba(40, 167, 69, 0.4);
+}
+
+.table-badge--status-expired {
+    background: rgba(108, 117, 125, 0.25);
+    color: #d4d8dc;
+    border-color: rgba(173, 181, 189, 0.42);
+}
+
+.table-badge--status-cancelled {
+    background: rgba(220, 53, 69, 0.2);
+    color: #ffa1ab;
+    border-color: rgba(220, 53, 69, 0.42);
 }
 
 .action-buttons {
@@ -1064,6 +1212,40 @@ body {
     width: 100%;
     border-radius: var(--border-radius);
     display: block;
+}
+
+.player-video-controls {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+}
+
+.player-video-controls label {
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.player-quality-select {
+    min-width: 120px;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.player-quality-select:focus {
+    outline: none;
+    border-color: rgba(229, 9, 20, 0.8);
+    box-shadow: 0 0 0 3px rgba(229, 9, 20, 0.2);
+}
+
+.player-video-controls.single-source {
+    opacity: 0.7;
 }
 
 .player-audio-cover-wrap {
@@ -1355,6 +1537,10 @@ body {
         grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     }
 
+    #moviesSection {
+        padding: 1rem;
+    }
+
     .split-content-layout {
         grid-template-columns: 1fr;
     }
@@ -1474,6 +1660,10 @@ body {
         padding: 1rem;
     }
 
+    .player-video-controls {
+        justify-content: space-between;
+    }
+
     .recommendations-grid {
         grid-template-columns: 1fr 1fr;
     }
@@ -1489,6 +1679,10 @@ body {
 
     .btn.btn-small {
         width: auto;
+    }
+
+    .modal-form-actions {
+        flex-direction: column-reverse;
     }
 }
 
@@ -1551,6 +1745,15 @@ body {
 
 @keyframes spin {
     100% { transform: rotate(360deg); }
+}
+
+@keyframes dashboardAmbientFloat {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    100% {
+        transform: translate3d(-3vw, -2vh, 0) scale(1.08);
+    }
 }
 
 /* Empty State */

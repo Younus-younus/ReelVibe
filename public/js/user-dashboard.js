@@ -628,6 +628,12 @@ function buildPlayerMetaRows(content, type) {
 function buildPlayerMarkup(content, type) {
     const mediaMarkup = type === 'movie'
         ? `
+            <div class="player-video-controls" id="playerVideoControls">
+                <label for="videoQualitySelect">Quality</label>
+                <select id="videoQualitySelect" class="player-quality-select" aria-label="Video quality">
+                    <option value="auto">Auto</option>
+                </select>
+            </div>
             <video class="player-media" controls autoplay controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture oncontextmenu="return false;">
                 <source src="${content.video_url}" type="video/mp4">
                 Your browser does not support video playback.
@@ -923,6 +929,7 @@ async function playContent(item) {
         activePlayerKey = playerKey;
         playerContainer.innerHTML = buildPlayerMarkup(content, type);
         lockPlayerMediaControls(playerContainer);
+        initializeVideoQualitySelector(playerContainer, content, type, playerKey);
         
         document.getElementById('playerModal').classList.add('show');
         loadPlayerRecommendations(content, type, playerKey);
@@ -1315,6 +1322,193 @@ async function performSearch() {
 
 function preventMediaContextMenu(event) {
     event.preventDefault();
+}
+
+function toAbsoluteUrl(url) {
+    try {
+        return new URL(url, window.location.origin).toString();
+    } catch (error) {
+        return '';
+    }
+}
+
+function deriveQualityLabel(url) {
+    const lowerUrl = String(url || '').toLowerCase();
+    const match = lowerUrl.match(/(2160|1440|1080|720|480|360)p/);
+    return match ? `${match[1]}p` : '';
+}
+
+function inferQualityCandidates(videoUrl) {
+    if (!videoUrl) {
+        return [];
+    }
+
+    const dotIndex = videoUrl.lastIndexOf('.');
+    if (dotIndex <= 0) {
+        return [];
+    }
+
+    const base = videoUrl.slice(0, dotIndex);
+    const extension = videoUrl.slice(dotIndex);
+
+    return [
+        { label: '1080p', url: `${base}_1080p${extension}` },
+        { label: '720p', url: `${base}_720p${extension}` },
+        { label: '480p', url: `${base}_480p${extension}` }
+    ];
+}
+
+function buildQualityOptionList(videoUrl, qualities) {
+    const baseUrl = toAbsoluteUrl(videoUrl);
+
+    const normalizedExplicit = Array.isArray(qualities)
+        ? qualities.map(option => {
+            if (!option) {
+                return null;
+            }
+
+            if (typeof option === 'string') {
+                const absoluteUrl = toAbsoluteUrl(option);
+                return absoluteUrl ? { label: deriveQualityLabel(option) || 'Source', url: absoluteUrl } : null;
+            }
+
+            const sourceUrl = option.url || option.src;
+            if (!sourceUrl) {
+                return null;
+            }
+
+            const absoluteUrl = toAbsoluteUrl(sourceUrl);
+            if (!absoluteUrl) {
+                return null;
+            }
+
+            return {
+                label: option.label || option.quality || deriveQualityLabel(sourceUrl) || 'Source',
+                url: absoluteUrl
+            };
+        }).filter(Boolean)
+        : [];
+
+    const inferred = inferQualityCandidates(videoUrl).map(option => ({
+        ...option,
+        url: toAbsoluteUrl(option.url)
+    })).filter(option => option.url && option.url !== baseUrl);
+
+    const unique = new Map();
+    [...normalizedExplicit, ...inferred].forEach(option => {
+        if (!unique.has(option.url)) {
+            unique.set(option.url, option);
+        }
+    });
+
+    return Array.from(unique.values());
+}
+
+async function validateVideoSource(url) {
+    try {
+        const response = await fetch(url, {
+            method: 'HEAD',
+            cache: 'no-store'
+        });
+
+        return response.ok;
+    } catch (error) {
+        return false;
+    }
+}
+
+async function resolveVideoQualityOptions(content) {
+    const baseUrl = toAbsoluteUrl(content.video_url);
+    if (!baseUrl) {
+        return [];
+    }
+
+    const candidates = buildQualityOptionList(content.video_url, content.video_qualities);
+    const checks = await Promise.all(candidates.map(async option => ({
+        option,
+        available: await validateVideoSource(option.url)
+    })));
+
+    const verified = checks.filter(entry => entry.available).map(entry => entry.option);
+
+    return [
+        { label: 'Auto', url: baseUrl },
+        ...verified
+    ];
+}
+
+function changeVideoQuality(videoElement, sourceElement, selectedUrl) {
+    if (!videoElement || !sourceElement || !selectedUrl) {
+        return;
+    }
+
+    const currentTime = videoElement.currentTime || 0;
+    const wasPaused = videoElement.paused;
+    const previousVolume = videoElement.volume;
+    const previousMuted = videoElement.muted;
+    const previousPlaybackRate = videoElement.playbackRate;
+
+    sourceElement.src = selectedUrl;
+    videoElement.load();
+
+    const restorePlaybackState = () => {
+        const maxSeek = Number.isFinite(videoElement.duration) ? Math.max(videoElement.duration - 0.25, 0) : currentTime;
+        videoElement.currentTime = Math.min(currentTime, maxSeek);
+        videoElement.volume = previousVolume;
+        videoElement.muted = previousMuted;
+        videoElement.playbackRate = previousPlaybackRate;
+
+        if (!wasPaused) {
+            videoElement.play().catch(() => {
+                // Ignore autoplay interruption after source switch.
+            });
+        }
+    };
+
+    videoElement.addEventListener('loadedmetadata', restorePlaybackState, { once: true });
+}
+
+async function initializeVideoQualitySelector(container, content, type, playerKey) {
+    if (type !== 'movie') {
+        return;
+    }
+
+    const videoElement = container.querySelector('video.player-media');
+    const sourceElement = videoElement?.querySelector('source');
+    const qualitySelect = container.querySelector('#videoQualitySelect');
+
+    if (!videoElement || !sourceElement || !qualitySelect) {
+        return;
+    }
+
+    const qualityOptions = await resolveVideoQualityOptions(content);
+
+    if (playerKey && activePlayerKey !== playerKey) {
+        return;
+    }
+
+    qualitySelect.innerHTML = qualityOptions.map(option => `
+        <option value="${escapeHtml(option.url)}">${escapeHtml(option.label)}</option>
+    `).join('');
+
+    const hasSelectableOptions = qualityOptions.length > 1;
+    qualitySelect.disabled = !hasSelectableOptions;
+
+    if (!hasSelectableOptions) {
+        const controls = container.querySelector('#playerVideoControls');
+        if (controls) {
+            controls.classList.add('single-source');
+        }
+    }
+
+    qualitySelect.addEventListener('change', (event) => {
+        const selectedUrl = event.target.value;
+        if (!selectedUrl) {
+            return;
+        }
+
+        changeVideoQuality(videoElement, sourceElement, selectedUrl);
+    });
 }
 
 function lockPlayerMediaControls(container) {
