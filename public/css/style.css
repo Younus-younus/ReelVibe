@@ -403,6 +403,40 @@ body {
     color: var(--text-secondary);
 }
 
+.password-requirements {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    padding: 0.75rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 0.3rem;
+}
+
+.password-requirements .requirement-title {
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.password-requirements ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.password-requirements .requirement {
+    margin: 0.25rem 0;
+    color: #999;
+    transition: color 0.3s ease;
+}
+
+.password-requirements .requirement.met {
+    color: #67e680;
+}
+
+.password-requirements .requirement.unmet {
+    color: #ff5f6d;
+}
+
 .otp-group {
     display: none;
 }
@@ -1280,6 +1314,64 @@ body {
     width: 100%;
     border-radius: var(--border-radius);
     display: block;
+}
+
+.video-player-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.skip-buttons-overlay {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1rem;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+.skip-buttons-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.skip-btn {
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0.75rem 1.2rem;
+    border-radius: var(--border-radius);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    pointer-events: auto;
+    backdrop-filter: blur(4px);
+}
+
+.skip-buttons-overlay.hidden .skip-btn {
+    pointer-events: none;
+}
+
+.skip-btn:hover {
+    background: rgba(0, 0, 0, 0.7);
+    transform: scale(1.08);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.skip-btn:active {
+    transform: scale(0.95);
 }
 
 .player-video-controls {

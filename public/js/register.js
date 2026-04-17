@@ -14,6 +14,43 @@ const confirmPasswordInput = document.getElementById('confirmPassword');
 
 let otpSent = false;
 
+// Password validation regex and function
+const PASSWORD_REGEX = /^[A-Z](?=.*[0-9])(?=.*[!@#$%^&*]).{7,}$/;
+
+function validatePasswordFormat(password) {
+    if (!password) return { valid: false, errors: [] };
+    
+    const errors = [];
+    if (password.length < 8) errors.push('length');
+    if (!/^[A-Z]/.test(password)) errors.push('capital');
+    if (!/[0-9]/.test(password)) errors.push('number');
+    if (!/[!@#$%^&*]/.test(password)) errors.push('special');
+    
+    return { valid: errors.length === 0, errors };
+}
+
+function updatePasswordRequirements(password) {
+    const requirements = {
+        'req-length': password.length >= 8,
+        'req-capital': /^[A-Z]/.test(password),
+        'req-number': /[0-9]/.test(password),
+        'req-special': /[!@#$%^&*]/.test(password)
+    };
+    
+    Object.entries(requirements).forEach(([id, met]) => {
+        const element = document.getElementById(id);
+        if (element) {
+            if (met) {
+                element.classList.remove('unmet');
+                element.classList.add('met');
+            } else {
+                element.classList.remove('met');
+                element.classList.add('unmet');
+            }
+        }
+    });
+}
+
 function setEmailStatus(message, state = 'info') {
     emailStatus.textContent = message || '';
     emailStatus.className = 'email-status';
@@ -35,6 +72,11 @@ function updateOtpUiState() {
 }
 
 updateOtpUiState();
+
+// Password input event listener
+passwordInput.addEventListener('input', () => {
+    updatePasswordRequirements(passwordInput.value);
+});
 
 // Register Form Handler
 registerForm.addEventListener('submit', async (e) => {
@@ -63,6 +105,23 @@ registerForm.addEventListener('submit', async (e) => {
     if (!otpSent) {
         if (password !== confirmPassword) {
             errorDiv.textContent = 'Passwords do not match';
+            errorDiv.classList.add('show');
+            return;
+        }
+
+        // Validate password format
+        const passwordValidation = validatePasswordFormat(password);
+        if (!passwordValidation.valid) {
+            let errorMsg = 'Password must have: ';
+            const requirementMessages = {
+                'length': 'minimum 8 characters',
+                'capital': 'first letter capital',
+                'number': 'at least one number',
+                'special': 'at least one special symbol (!@#$%^&*)'
+            };
+            
+            const missing = passwordValidation.errors.map(err => requirementMessages[err]).join(', ');
+            errorDiv.textContent = 'Password requirements not met: ' + missing;
             errorDiv.classList.add('show');
             return;
         }

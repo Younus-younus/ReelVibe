@@ -35,7 +35,16 @@
                     </div>
                     <div class="form-group">
                         <label for="password">Password</label>
-                        <input type="password" id="password" name="password" required pattern=".*\S.*" title="This field cannot be only spaces" placeholder="Create a password">
+                        <input type="password" id="password" name="password" required placeholder="Create a password">
+                        <div id="passwordRequirements" class="password-requirements">
+                            <p class="requirement-title">Password must have:</p>
+                            <ul>
+                                <li id="req-length" class="requirement">✓ Minimum 8 characters</li>
+                                <li id="req-capital" class="requirement">✓ First letter capital</li>
+                                <li id="req-number" class="requirement">✓ At least one number</li>
+                                <li id="req-special" class="requirement">✓ One special symbol (!@#$%^&*)</li>
+                            </ul>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="confirmPassword">Confirm Password</label>

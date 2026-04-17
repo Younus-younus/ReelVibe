@@ -719,10 +719,16 @@ function buildPlayerMarkup(content, type) {
                     <option value="auto">Auto</option>
                 </select>
             </div>
-            <video class="player-media" controls autoplay controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture oncontextmenu="return false;">
-                <source src="${content.video_url}" type="video/mp4">
-                Your browser does not support video playback.
-            </video>
+            <div class="video-player-wrapper">
+                <video class="player-media" controls autoplay controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture oncontextmenu="return false;">
+                    <source src="${content.video_url}" type="video/mp4">
+                    Your browser does not support video playback.
+                </video>
+                <div class="skip-buttons-overlay">
+                    <button class="skip-btn skip-backward" title="Skip backward 10 seconds">⏪ 10s</button>
+                    <button class="skip-btn skip-forward" title="Skip forward 10 seconds">⏩ 10s</button>
+                </div>
+            </div>
         `
         : `
             <div class="player-audio-cover-wrap">
@@ -1014,6 +1020,7 @@ async function playContent(item) {
         activePlayerKey = playerKey;
         playerContainer.innerHTML = buildPlayerMarkup(content, type);
         lockPlayerMediaControls(playerContainer);
+        initializeSkipButtons(playerContainer);
         initializeVideoQualitySelector(playerContainer, content, type, playerKey);
         
         document.getElementById('playerModal').classList.add('show');
@@ -1596,6 +1603,38 @@ async function initializeVideoQualitySelector(container, content, type, playerKe
         }
 
         changeVideoQuality(videoElement, sourceElement, selectedUrl);
+    });
+}
+
+function initializeSkipButtons(container) {
+    const skipBackwardBtn = container.querySelector('.skip-buttons-overlay .skip-backward');
+    const skipForwardBtn = container.querySelector('.skip-buttons-overlay .skip-forward');
+    const skipButtonsOverlay = container.querySelector('.skip-buttons-overlay');
+    const video = container.querySelector('video.player-media');
+
+    if (!skipBackwardBtn || !skipForwardBtn || !video || !skipButtonsOverlay) {
+        return;
+    }
+
+    // Hide buttons initially since video starts playing
+    skipButtonsOverlay.classList.add('hidden');
+
+    // Show buttons when paused
+    video.addEventListener('pause', () => {
+        skipButtonsOverlay.classList.remove('hidden');
+    });
+
+    // Hide buttons when playing
+    video.addEventListener('play', () => {
+        skipButtonsOverlay.classList.add('hidden');
+    });
+
+    skipBackwardBtn.addEventListener('click', () => {
+        video.currentTime = Math.max(0, video.currentTime - 10);
+    });
+
+    skipForwardBtn.addEventListener('click', () => {
+        video.currentTime = Math.min(video.duration, video.currentTime + 10);
     });
 }
 

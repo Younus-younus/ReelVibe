@@ -249,6 +249,9 @@ async function loadMovies() {
             return;
         }
         
+        // Sort movies by ID in ascending order
+        data.movies.sort((a, b) => a.id - b.id);
+        
         container.innerHTML = `
             <table class="admin-table">
                 <thead>
@@ -263,13 +266,13 @@ async function loadMovies() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${data.movies.map(movie => {
+                    ${data.movies.map((movie, index) => {
                         const subscriptionRaw = String(movie.subscription_required || movie.subscription_plan || 'free').toLowerCase();
                         const subscriptionStatus = subscriptionRaw === 'free' ? 'Free' : 'Premium';
                         const subscriptionClass = subscriptionRaw === 'free' ? 'table-badge--free' : 'table-badge--premium';
                         return `
                         <tr>
-                            <td>${movie.id}</td>
+                            <td>${index + 1}</td>
                             <td>${movie.title}</td>
                             <td>${movie.genre || 'N/A'}</td>
                             <td>${movie.release_year || 'N/A'}</td>

@@ -6,6 +6,14 @@ const db = require('../config/database');
 
 const OTP_EXPIRY_MINUTES = Number(process.env.OTP_EXPIRY_MINUTES || 10);
 
+// Password validation regex
+const PASSWORD_REGEX = /^[A-Z](?=.*[0-9])(?=.*[!@#$%^&*]).{7,}$/;
+
+function validatePasswordFormat(password) {
+    if (!password || typeof password !== 'string') return false;
+    return PASSWORD_REGEX.test(password);
+}
+
 async function ensureOtpTable() {
     await db.query(`
         CREATE TABLE IF NOT EXISTS email_otps (
@@ -69,6 +77,14 @@ exports.sendRegistrationOtp = async (req, res) => {
         // Validate input
         if (!normalizedName || !normalizedEmail || !normalizedPassword) {
             return res.status(400).json({ success: false, message: 'All fields are required' });
+        }
+
+        // Validate password format
+        if (!validatePasswordFormat(normalizedPassword)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Password must have: minimum 8 characters, first letter capital, at least one number, and one special symbol (!@#$%^&*)' 
+            });
         }
 
         // Check if user already exists
