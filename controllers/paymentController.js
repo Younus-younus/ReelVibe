@@ -108,9 +108,18 @@ exports.verifyPayment = async (req, res) => {
             [userId]
         );
 
-        // Activate premium for 1 month
+        // Activate paid plan based on its billing cycle
+        const selectedPlan = plans[0];
+        if (!['monthly', 'annual'].includes(selectedPlan.name)) {
+            return res.status(400).json({ success: false, message: 'Selected plan is not a paid subscription.' });
+        }
+
         const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + 1);
+        if (selectedPlan.name === 'annual') {
+            endDate.setFullYear(endDate.getFullYear() + 1);
+        } else {
+            endDate.setMonth(endDate.getMonth() + 1);
+        }
 
         await db.query(
             `INSERT INTO user_subscriptions (user_id, plan_id, start_date, end_date, status, payment_id)
@@ -118,7 +127,7 @@ exports.verifyPayment = async (req, res) => {
             [userId, plan_id, endDate.toISOString().split('T')[0], razorpay_payment_id]
         );
 
-        res.json({ success: true, message: 'Premium subscription activated successfully!' });
+        res.json({ success: true, message: `${selectedPlan.name.charAt(0).toUpperCase() + selectedPlan.name.slice(1)} subscription activated successfully!` });
     } catch (error) {
         console.error('Verify Razorpay payment error:', error);
         res.status(500).json({ success: false, message: error.message || 'Failed to verify payment' });

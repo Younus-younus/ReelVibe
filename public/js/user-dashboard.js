@@ -209,6 +209,49 @@ function switchSection(section) {
     }
 }
 
+function setupHorizontalScrollControls(scope = document) {
+    scope.querySelectorAll('.scroll-row').forEach((row) => {
+        if (row.dataset.scrollReady === 'true') {
+            return;
+        }
+
+        const scroller = row.querySelector('.split-grid');
+        const leftBtn = row.querySelector('.scroll-nav-btn.left');
+        const rightBtn = row.querySelector('.scroll-nav-btn.right');
+
+        if (!scroller || !leftBtn || !rightBtn) {
+            return;
+        }
+
+        const getScrollAmount = () => Math.max(220, Math.floor(scroller.clientWidth * 0.85));
+
+        const updateButtons = () => {
+            const maxScrollLeft = scroller.scrollWidth - scroller.clientWidth;
+            const canScroll = maxScrollLeft > 4;
+            const nearStart = scroller.scrollLeft <= 4;
+            const nearEnd = scroller.scrollLeft >= maxScrollLeft - 4;
+
+            row.classList.toggle('has-scroll-controls', canScroll);
+            leftBtn.disabled = !canScroll || nearStart;
+            rightBtn.disabled = !canScroll || nearEnd;
+        };
+
+        leftBtn.addEventListener('click', () => {
+            scroller.scrollBy({ left: -getScrollAmount(), behavior: 'smooth' });
+        });
+
+        rightBtn.addEventListener('click', () => {
+            scroller.scrollBy({ left: getScrollAmount(), behavior: 'smooth' });
+        });
+
+        scroller.addEventListener('scroll', updateButtons, { passive: true });
+        window.addEventListener('resize', updateButtons, { passive: true });
+
+        row.dataset.scrollReady = 'true';
+        requestAnimationFrame(updateButtons);
+    });
+}
+
 async function loadProfileSection() {
     await Promise.all([loadUserProfile(), loadProfileSubscriptionStatus()]);
 }
@@ -253,17 +296,17 @@ async function loadProfileSubscriptionStatus() {
             const sub = data.subscription;
             const planName = (sub.plan_name || 'free').toLowerCase();
 
-            userSubscriptionPlan = planName;
+            userSubscriptionPlan = normalizeSubscriptionPlan(planName);
 
             statusContainer.innerHTML = `
-                <p><strong>Current Plan:</strong> ${planName.toUpperCase()}</p>
+                <p><strong>Current Plan:</strong> ${getPlanDisplayName(planName)}</p>
                 <p><strong>Status:</strong> ${sub.status}</p>
                 <p><strong>Start Date:</strong> ${new Date(sub.start_date).toLocaleDateString()}</p>
                 <p><strong>End Date:</strong> ${sub.end_date ? new Date(sub.end_date).toLocaleDateString() : 'N/A'}</p>
             `;
 
-            // Allow direct cancel only for active premium memberships
-            cancelBtn.style.display = (planName === 'premium' && sub.status === 'active') ? 'inline-block' : 'none';
+            // Allow direct cancel only for active paid memberships
+            cancelBtn.style.display = (planName !== 'free' && sub.status === 'active') ? 'inline-block' : 'none';
         } else {
             userSubscriptionPlan = 'free';
             statusContainer.innerHTML = '<p>No active subscription found.</p>';
@@ -296,13 +339,25 @@ async function loadContent() {
                     <section class="split-content-section">
                         <h3 class="split-section-title">Movies</h3>
                         ${movies.length > 0
-                            ? `<div class="content-grid split-grid split-movie-grid">${movies.map(item => createContentCard({ ...item, type: 'movie' })).join('')}</div>`
+                            ? `
+                                <div class="scroll-row">
+                                    <button type="button" class="scroll-nav-btn left" aria-label="Scroll movies left">&#10094;</button>
+                                    <div class="content-grid split-grid split-movie-grid">${movies.map(item => createContentCard({ ...item, type: 'movie' })).join('')}</div>
+                                    <button type="button" class="scroll-nav-btn right" aria-label="Scroll movies right">&#10095;</button>
+                                </div>
+                            `
                             : '<div class="empty-state split-empty"><p>No movies found</p></div>'}
                     </section>
                     <section class="split-content-section">
                         <h3 class="split-section-title">Music</h3>
                         ${music.length > 0
-                            ? `<div class="content-grid split-grid split-music-grid">${music.map(item => createContentCard({ ...item, type: 'music' })).join('')}</div>`
+                            ? `
+                                <div class="scroll-row">
+                                    <button type="button" class="scroll-nav-btn left" aria-label="Scroll music left">&#10094;</button>
+                                    <div class="content-grid split-grid split-music-grid">${music.map(item => createContentCard({ ...item, type: 'music' })).join('')}</div>
+                                    <button type="button" class="scroll-nav-btn right" aria-label="Scroll music right">&#10095;</button>
+                                </div>
+                            `
                             : '<div class="empty-state split-empty"><p>No music found</p></div>'}
                     </section>
                 </div>
@@ -315,6 +370,8 @@ async function loadContent() {
             container.querySelectorAll('.split-music-grid .content-card').forEach((card, index) => {
                 card.addEventListener('click', () => playContent({ ...music[index], type: 'music' }));
             });
+
+            setupHorizontalScrollControls(container);
 
             return;
         }
@@ -527,7 +584,35 @@ function escapeHtml(value) {
 }
 
 function normalizeSubscriptionPlan(plan) {
-    return plan === 'basic' ? 'premium' : (plan || 'free');
+    if (!plan || plan === 'free') {
+        return 'free';
+    }
+
+    return 'premium';
+}
+
+function getPlanDisplayName(planName) {
+    if (planName === 'monthly') {
+        return 'MONTHLY';
+    }
+
+    if (planName === 'annual') {
+        return 'ANNUAL';
+    }
+
+    return 'FREE';
+}
+
+function getPlanPeriodLabel(planName) {
+    if (planName === 'annual') {
+        return '/year';
+    }
+
+    if (planName === 'monthly') {
+        return '/month';
+    }
+
+    return '';
 }
 
 async function getContentCatalog(type) {
@@ -1004,9 +1089,10 @@ async function loadSubscription() {
         const currentPlanDiv = document.getElementById('currentPlan');
         if (subData.success && subData.subscription) {
             const sub = subData.subscription;
+            const planName = (sub.plan_name || 'free').toLowerCase();
             currentPlanDiv.innerHTML = `
-                <h4>${sub.plan_name.toUpperCase()}</h4>
-                <p class="price">$${sub.price}/month</p>
+                <h4>${getPlanDisplayName(planName)}</h4>
+                <p class="price">${parseFloat(sub.price) === 0 ? 'Free' : `₹${parseFloat(sub.price).toFixed(2)}<span>${getPlanPeriodLabel(planName)}</span>`}</p>
                 <p>${sub.description}</p>
                 <p>Status: <strong>${sub.status}</strong></p>
                 ${sub.end_date ? `<p>Expires: ${new Date(sub.end_date).toLocaleDateString()}</p>` : ''}
@@ -1030,16 +1116,17 @@ async function loadSubscription() {
                     ? 'Current Plan'
                     : isPaid ? '💳 Pay & Upgrade' : 'Switch to Free';
                 const btnDisabled = isCurrent ? 'disabled' : '';
+                const planName = (plan.name || '').toLowerCase();
                 const priceLabel = parseFloat(plan.price) === 0
                     ? 'Free'
-                    : `₹${parseFloat(plan.price).toFixed(2)}<span>/month</span>`;
+                    : `₹${parseFloat(plan.price).toFixed(2)}<span>${getPlanPeriodLabel(planName)}</span>`;
                 return `
                 <div class="plan-card${isCurrent ? ' current-active-plan' : ''}">
-                    <h4>${plan.name.toUpperCase()}</h4>
+                    <h4>${getPlanDisplayName(planName)}</h4>
                     <p class="price">${priceLabel}</p>
                     <p>${plan.description}</p>
                     ${isPaid && !isCurrent ? '<p class="payment-note"><small>🔒 Secure payment via Razorpay</small></p>' : ''}
-                    <button class="btn btn-primary" onclick="subscribeToPlan(${plan.id}, ${plan.price}, '${plan.name.toUpperCase()}')" ${btnDisabled}>
+                    <button class="btn btn-primary" onclick="subscribeToPlan(${plan.id}, ${plan.price}, '${planName}')" ${btnDisabled}>
                         ${btnLabel}
                     </button>
                 </div>`;
@@ -1055,6 +1142,7 @@ async function loadSubscription() {
 // price === 0 → free: direct subscribe (no payment)
 async function subscribeToPlan(planId, price, planName) {
     const isPaid = parseFloat(price) > 0;
+    const periodLabel = planName === 'annual' ? '1 Year' : '1 Month';
 
     if (isPaid) {
         try {
@@ -1080,7 +1168,7 @@ async function subscribeToPlan(planId, price, planName) {
                 amount:      orderData.amount,
                 currency:    orderData.currency,
                 name:        'ReelVibe',
-                description: `${planName} Plan – 1 Month Access`,
+                description: `${getPlanDisplayName(planName)} Plan - ${periodLabel} Access`,
                 image:       '/favicon.ico',
                 order_id:    orderData.order_id,
                 prefill: {

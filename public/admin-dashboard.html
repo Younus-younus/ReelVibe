@@ -125,7 +125,7 @@
                 <input type="hidden" id="movieId" name="movieId">
                 <div class="form-group">
                     <label for="movieTitle">Title *</label>
-                    <input type="text" id="movieTitle" name="title" required pattern=".*\S.*" title="This field cannot be only spaces">
+                    <input type="text" id="movieTitle" name="title" required pattern="[A-Za-z ]+" title="Only alphabetic characters and spaces are allowed">
                 </div>
                 <div class="form-group">
                     <label for="movieDescription">Description</label>
@@ -134,7 +134,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label for="movieGenre">Genre</label>
-                        <input type="text" id="movieGenre" name="genre">
+                        <input type="text" id="movieGenre" name="genre" pattern="[A-Za-z ]*" title="Only alphabetic characters and spaces are allowed">
                     </div>
                     <div class="form-group">
                         <label for="movieYear">Release Year</label>
@@ -179,16 +179,16 @@
                 <input type="hidden" id="musicId" name="musicId">
                 <div class="form-group">
                     <label for="musicTitle">Title *</label>
-                    <input type="text" id="musicTitle" name="title" required pattern=".*\S.*" title="This field cannot be only spaces">
+                    <input type="text" id="musicTitle" name="title" required pattern="[A-Za-z ]+" title="Only alphabetic characters and spaces are allowed">
                 </div>
                 <div class="form-group">
                     <label for="musicArtist">Artist</label>
-                    <input type="text" id="musicArtist" name="artist">
+                    <input type="text" id="musicArtist" name="artist" pattern="[A-Za-z ]*" title="Only alphabetic characters and spaces are allowed">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="musicGenre">Genre</label>
-                        <input type="text" id="musicGenre" name="genre">
+                        <input type="text" id="musicGenre" name="genre" pattern="[A-Za-z ]*" title="Only alphabetic characters and spaces are allowed">
                     </div>
                     <div class="form-group">
                         <label for="musicSubscription">Subscription Required</label>

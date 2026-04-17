@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const fs = require('fs');
 const path = require('path');
+const ALPHA_SPACE_REGEX = /^[A-Za-z ]+$/;
 
 // Get all music with optional filters
 exports.getAllMusic = async (req, res) => {
@@ -46,8 +47,8 @@ exports.getAllMusic = async (req, res) => {
 
         const hasActiveMembership = userSub.length > 0;
 
-        const effectivePlan = userSub[0]?.plan === 'basic' ? 'premium' : (userSub[0]?.plan || 'free');
-        const userPlan = hasActiveMembership ? effectivePlan : 'free';
+        const effectivePlan = userSub[0]?.plan || 'free';
+        const userPlan = hasActiveMembership && effectivePlan !== 'free' ? 'premium' : 'free';
         
         // Return ALL music but include user's plan for frontend to show locks
         res.json({ success: true, music: normalizedMusic, userPlan });
@@ -93,8 +94,8 @@ exports.getMusic = async (req, res) => {
         // Determine user's effective plan (choose highest active non-expired plan)
         const hasActiveMembership = userSub.length > 0;
 
-        const effectivePlan = userSub[0]?.plan === 'basic' ? 'premium' : (userSub[0]?.plan || 'free');
-        const userPlan = hasActiveMembership ? effectivePlan : 'free';
+        const effectivePlan = userSub[0]?.plan || 'free';
+        const userPlan = hasActiveMembership && effectivePlan !== 'free' ? 'premium' : 'free';
 
         // Check if user has access to this content
         const hasAccess =
@@ -129,9 +130,23 @@ exports.addMusic = async (req, res) => {
     try {
         const { title, artist, genre, subscription_required } = req.body;
         const normalizedTitle = (title || '').trim();
+        const normalizedArtist = (artist || '').trim();
+        const normalizedGenre = (genre || '').trim();
 
         if (!normalizedTitle) {
             return res.status(400).json({ success: false, message: 'Music title is required' });
+        }
+
+        if (!ALPHA_SPACE_REGEX.test(normalizedTitle)) {
+            return res.status(400).json({ success: false, message: 'Music title can contain only alphabetic characters and spaces' });
+        }
+
+        if (normalizedArtist && !ALPHA_SPACE_REGEX.test(normalizedArtist)) {
+            return res.status(400).json({ success: false, message: 'Music artist can contain only alphabetic characters and spaces' });
+        }
+
+        if (normalizedGenre && !ALPHA_SPACE_REGEX.test(normalizedGenre)) {
+            return res.status(400).json({ success: false, message: 'Music genre can contain only alphabetic characters and spaces' });
         }
 
         const audio_url = req.files?.audio ? `/uploads/audio/${req.files.audio[0].filename}` : null;
@@ -140,7 +155,7 @@ exports.addMusic = async (req, res) => {
         const [result] = await db.query(
             `INSERT INTO music (title, artist, genre, audio_url, poster_url, subscription_required)
              VALUES (?, ?, ?, ?, ?, ?)`,
-            [normalizedTitle, artist, genre, audio_url, poster_url, subscription_required || 'free']
+            [normalizedTitle, normalizedArtist || null, normalizedGenre || null, audio_url, poster_url, subscription_required || 'free']
         );
 
         res.status(201).json({ 
@@ -174,11 +189,26 @@ exports.updateMusic = async (req, res) => {
         const title = trimmedTitle !== undefined
             ? trimmedTitle
             : existing[0].title;
-        const artist = req.body.artist !== undefined 
-            ? req.body.artist 
+        const trimmedArtist = req.body.artist !== undefined ? String(req.body.artist).trim() : undefined;
+        const trimmedGenre = req.body.genre !== undefined ? String(req.body.genre).trim() : undefined;
+
+        if (title && !ALPHA_SPACE_REGEX.test(title)) {
+            return res.status(400).json({ success: false, message: 'Music title can contain only alphabetic characters and spaces' });
+        }
+
+        if (trimmedArtist !== undefined && trimmedArtist && !ALPHA_SPACE_REGEX.test(trimmedArtist)) {
+            return res.status(400).json({ success: false, message: 'Music artist can contain only alphabetic characters and spaces' });
+        }
+
+        if (trimmedGenre !== undefined && trimmedGenre && !ALPHA_SPACE_REGEX.test(trimmedGenre)) {
+            return res.status(400).json({ success: false, message: 'Music genre can contain only alphabetic characters and spaces' });
+        }
+
+        const artist = trimmedArtist !== undefined 
+            ? trimmedArtist 
             : existing[0].artist;
-        const genre = req.body.genre !== undefined && req.body.genre !== '' 
-            ? req.body.genre 
+        const genre = trimmedGenre !== undefined && trimmedGenre !== '' 
+            ? trimmedGenre 
             : existing[0].genre;
         const subscription_required = req.body.subscription_required !== undefined 
             ? req.body.subscription_required 

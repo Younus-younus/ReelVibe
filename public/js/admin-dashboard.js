@@ -2,6 +2,7 @@
 const API_URL = '/api';
 let token = localStorage.getItem('token');
 let currentUser = null;
+const ALPHA_SPACE_REGEX = /^[A-Za-z ]+$/;
 
 // Parse user data safely
 try {
@@ -150,6 +151,21 @@ function setupEventListeners() {
     // Forms
     document.getElementById('movieForm').addEventListener('submit', saveMovie);
     document.getElementById('musicForm').addEventListener('submit', saveMusic);
+
+    // Restrict text inputs to alphabetic characters and spaces only
+    ['movieTitle', 'movieGenre', 'musicTitle', 'musicArtist', 'musicGenre'].forEach((id) => {
+        const input = document.getElementById(id);
+        if (!input) return;
+
+        input.addEventListener('input', () => {
+            input.value = input.value.replace(/[^A-Za-z\s]/g, '');
+        });
+    });
+}
+
+function isAlphabeticText(value) {
+    const trimmed = (value || '').trim();
+    return trimmed ? ALPHA_SPACE_REGEX.test(trimmed) : true;
 }
 
 // Switch sections
@@ -516,8 +532,19 @@ async function saveMovie(e) {
     e.preventDefault();
 
     const movieTitle = document.getElementById('movieTitle').value.trim();
+    const movieGenre = document.getElementById('movieGenre').value.trim();
     if (!movieTitle) {
         alert('Movie title is required');
+        return;
+    }
+
+    if (!ALPHA_SPACE_REGEX.test(movieTitle)) {
+        alert('Movie title can contain only alphabetic characters and spaces');
+        return;
+    }
+
+    if (!isAlphabeticText(movieGenre)) {
+        alert('Movie genre can contain only alphabetic characters and spaces');
         return;
     }
     
@@ -624,8 +651,25 @@ async function saveMusic(e) {
     e.preventDefault();
 
     const musicTitle = document.getElementById('musicTitle').value.trim();
+    const musicArtist = document.getElementById('musicArtist').value.trim();
+    const musicGenre = document.getElementById('musicGenre').value.trim();
     if (!musicTitle) {
         alert('Music title is required');
+        return;
+    }
+
+    if (!ALPHA_SPACE_REGEX.test(musicTitle)) {
+        alert('Music title can contain only alphabetic characters and spaces');
+        return;
+    }
+
+    if (!isAlphabeticText(musicArtist)) {
+        alert('Music artist can contain only alphabetic characters and spaces');
+        return;
+    }
+
+    if (!isAlphabeticText(musicGenre)) {
+        alert('Music genre can contain only alphabetic characters and spaces');
         return;
     }
     

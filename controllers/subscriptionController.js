@@ -4,14 +4,17 @@ const db = require('../config/database');
 exports.getPlans = async (req, res) => {
     try {
         const [plans] = await db.query(
-            "SELECT * FROM subscription_plans WHERE name IN ('free', 'premium') ORDER BY price ASC"
+            `SELECT * FROM subscription_plans
+             WHERE name IN ('free', 'monthly', 'annual')
+             ORDER BY CASE name
+                 WHEN 'free' THEN 0
+                 WHEN 'monthly' THEN 1
+                 WHEN 'annual' THEN 2
+                 ELSE 3
+             END`
         );
-        const normalizedPlans = plans.map(plan => ({
-            ...plan,
-            name: plan.name === 'basic' ? 'premium' : plan.name
-        }));
 
-        res.json({ success: true, plans: normalizedPlans });
+        res.json({ success: true, plans });
     } catch (error) {
         console.error('Get plans error:', error);
         res.status(500).json({ success: false, message: 'Server error' });
@@ -43,12 +46,7 @@ exports.getUserSubscription = async (req, res) => {
             return res.json({ success: true, subscription: null });
         }
 
-        const normalizedSubscription = {
-            ...subscription[0],
-            plan_name: subscription[0].plan_name === 'basic' ? 'premium' : subscription[0].plan_name
-        };
-
-        res.json({ success: true, subscription: normalizedSubscription });
+        res.json({ success: true, subscription: subscription[0] });
 
     } catch (error) {
         console.error('Get user subscription error:', error);
@@ -68,8 +66,8 @@ exports.subscribe = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Plan not found' });
         }
 
-        if (!['free', 'premium'].includes(plans[0].name)) {
-            return res.status(400).json({ success: false, message: 'Only free and premium plans are available.' });
+        if (!['free', 'monthly', 'annual'].includes(plans[0].name)) {
+            return res.status(400).json({ success: false, message: 'Invalid plan selected.' });
         }
 
         // Cancel existing active subscriptions
@@ -79,7 +77,7 @@ exports.subscribe = async (req, res) => {
             [userId]
         );
 
-        // Free plan has no expiry; premium lasts 1 month per subscription
+        // Free plan has no expiry; monthly/annual are paid with fixed durations
         if (plans[0].name === 'free') {
             await db.query(
                 `INSERT INTO user_subscriptions (user_id, plan_id, start_date, end_date, status)
@@ -88,7 +86,11 @@ exports.subscribe = async (req, res) => {
             );
         } else {
             const endDate = new Date();
-            endDate.setMonth(endDate.getMonth() + 1);
+            if (plans[0].name === 'annual') {
+                endDate.setFullYear(endDate.getFullYear() + 1);
+            } else {
+                endDate.setMonth(endDate.getMonth() + 1);
+            }
 
             await db.query(
                 `INSERT INTO user_subscriptions (user_id, plan_id, start_date, end_date, status)
@@ -143,17 +145,12 @@ exports.getAllSubscriptions = async (req, res) => {
              JOIN users u ON us.user_id = u.id
              JOIN subscription_plans sp ON us.plan_id = sp.id
              WHERE us.status = 'active'
-               AND sp.name = 'premium'
+                             AND sp.name IN ('monthly', 'annual')
                AND (us.end_date IS NULL OR us.end_date >= CURDATE())
              ORDER BY us.created_at DESC`
         );
 
-        const normalizedSubscriptions = subscriptions.map(subscription => ({
-            ...subscription,
-            plan_name: subscription.plan_name === 'basic' ? 'premium' : subscription.plan_name
-        }));
-
-        res.json({ success: true, subscriptions: normalizedSubscriptions });
+                res.json({ success: true, subscriptions });
 
     } catch (error) {
         console.error('Get all subscriptions error:', error);

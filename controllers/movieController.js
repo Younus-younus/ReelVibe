@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const fs = require('fs');
 const path = require('path');
+const ALPHA_SPACE_REGEX = /^[A-Za-z ]+$/;
 
 // Get all movies with optional filters
 exports.getAllMovies = async (req, res) => {
@@ -48,8 +49,8 @@ exports.getAllMovies = async (req, res) => {
 
         const hasActiveMembership = userSub.length > 0;
 
-        const effectivePlan = userSub[0]?.plan === 'basic' ? 'premium' : (userSub[0]?.plan || 'free');
-        const userPlan = hasActiveMembership ? effectivePlan : 'free';
+        const effectivePlan = userSub[0]?.plan || 'free';
+        const userPlan = hasActiveMembership && effectivePlan !== 'free' ? 'premium' : 'free';
         
         console.log('getAllMovies - User ID:', req.user.id);
         console.log('getAllMovies - User subscription:', userSub[0]);
@@ -100,8 +101,8 @@ exports.getMovie = async (req, res) => {
         // Determine user's effective plan (choose highest active non-expired plan)
         const hasActiveMembership = userSub.length > 0;
 
-        const effectivePlan = userSub[0]?.plan === 'basic' ? 'premium' : (userSub[0]?.plan || 'free');
-        const userPlan = hasActiveMembership ? effectivePlan : 'free';
+        const effectivePlan = userSub[0]?.plan || 'free';
+        const userPlan = hasActiveMembership && effectivePlan !== 'free' ? 'premium' : 'free';
 
         // Check if user has access to this content
         const hasAccess =
@@ -136,14 +137,18 @@ exports.addMovie = async (req, res) => {
     try {
         const { title, description, genre, release_year, rating, subscription_required } = req.body;
         const normalizedTitle = (title || '').trim();
+        const normalizedGenre = (genre || '').trim();
 
         if (!normalizedTitle) {
             return res.status(400).json({ success: false, message: 'Movie title is required' });
         }
 
-        // Validate required fields
-        if (!title || title.trim() === '') {
-            return res.status(400).json({ success: false, message: 'Title is required' });
+        if (!ALPHA_SPACE_REGEX.test(normalizedTitle)) {
+            return res.status(400).json({ success: false, message: 'Movie title can contain only alphabetic characters and spaces' });
+        }
+
+        if (normalizedGenre && !ALPHA_SPACE_REGEX.test(normalizedGenre)) {
+            return res.status(400).json({ success: false, message: 'Movie genre can contain only alphabetic characters and spaces' });
         }
 
         console.log('Add movie request body:', req.body);
@@ -155,7 +160,7 @@ exports.addMovie = async (req, res) => {
         const [result] = await db.query(
             `INSERT INTO movies (title, description, genre, release_year, rating, video_url, poster_url, subscription_required)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [normalizedTitle, description, genre, release_year, rating, video_url, poster_url, subscription_required || 'free']
+            [normalizedTitle, description, normalizedGenre || null, release_year, rating, video_url, poster_url, subscription_required || 'free']
         );
 
         res.status(201).json({ 
@@ -190,11 +195,20 @@ exports.updateMovie = async (req, res) => {
         const title = trimmedTitle !== undefined
             ? trimmedTitle
             : existing[0].title;
+        const trimmedGenre = req.body.genre !== undefined ? String(req.body.genre).trim() : undefined;
+        if (trimmedGenre !== undefined && trimmedGenre && !ALPHA_SPACE_REGEX.test(trimmedGenre)) {
+            return res.status(400).json({ success: false, message: 'Movie genre can contain only alphabetic characters and spaces' });
+        }
+
+        if (title && !ALPHA_SPACE_REGEX.test(title)) {
+            return res.status(400).json({ success: false, message: 'Movie title can contain only alphabetic characters and spaces' });
+        }
+
         const description = req.body.description !== undefined 
             ? req.body.description 
             : existing[0].description;
-        const genre = req.body.genre !== undefined && req.body.genre !== '' 
-            ? req.body.genre 
+        const genre = trimmedGenre !== undefined && trimmedGenre !== '' 
+            ? trimmedGenre 
             : existing[0].genre;
         const release_year = req.body.release_year !== undefined && req.body.release_year !== '' 
             ? req.body.release_year 

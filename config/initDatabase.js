@@ -40,13 +40,19 @@ async function initializeDatabase() {
         await connection.query(`
             CREATE TABLE IF NOT EXISTS subscription_plans (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                name ENUM('free', 'premium') UNIQUE NOT NULL,
+                name ENUM('free', 'basic', 'premium', 'monthly', 'annual') UNIQUE NOT NULL,
                 price DECIMAL(10, 2) DEFAULT 0,
                 description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
         console.log('✅ Subscription Plans table created');
+
+        // Ensure plan enum supports monthly and annual tiers on existing databases
+        await connection.query(`
+            ALTER TABLE subscription_plans
+            MODIFY COLUMN name ENUM('free', 'basic', 'premium', 'monthly', 'annual') UNIQUE NOT NULL
+        `);
 
         // Create Movies table
         await connection.query(`
@@ -143,9 +149,14 @@ async function initializeDatabase() {
 
         // Insert default subscription plans
         await connection.query(`
-            INSERT IGNORE INTO subscription_plans (id, name, price, description) VALUES
+            INSERT INTO subscription_plans (id, name, price, description) VALUES
             (1, 'free', 0.00, 'Limited content access'),
-            (2, 'premium', 19.99, 'Unlimited access to all content')
+            (2, 'monthly', 9.00, 'Premium monthly access to all content'),
+            (3, 'annual', 19.00, 'Premium annual access to all content')
+            ON DUPLICATE KEY UPDATE
+                name = VALUES(name),
+                price = VALUES(price),
+                description = VALUES(description)
         `);
         console.log('✅ Default subscription plans inserted');
 
@@ -160,12 +171,15 @@ async function initializeDatabase() {
         `);
         await connection.query(`
             UPDATE user_subscriptions us
-            JOIN subscription_plans basic ON us.plan_id = basic.id AND basic.name = 'basic'
-            JOIN subscription_plans premium ON premium.name = 'premium'
-            SET us.plan_id = premium.id
+            JOIN subscription_plans legacy ON us.plan_id = legacy.id AND legacy.name IN ('basic', 'premium')
+            JOIN subscription_plans monthly ON monthly.name = 'monthly'
+            SET us.plan_id = monthly.id
         `);
         await connection.query(`
             DELETE FROM subscription_plans WHERE name = 'basic'
+        `);
+        await connection.query(`
+            DELETE FROM subscription_plans WHERE name = 'premium'
         `);
 
         // Create default admin user
