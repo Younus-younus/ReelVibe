@@ -1597,6 +1597,110 @@ body {
     margin-bottom: 1rem;
 }
 
+/* Plan Status and Reminder Styles */
+.plan-status {
+    padding: 0;
+}
+
+.plan-type {
+    font-size: 1rem;
+    color: var(--primary-color);
+    font-weight: 500;
+    margin-bottom: 1rem;
+    padding: 0.5rem 0;
+}
+
+.plan-description {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+}
+
+.plan-details {
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+}
+
+.plan-details p {
+    margin-bottom: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-secondary);
+}
+
+.plan-details p strong {
+    color: var(--text-primary);
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.active {
+    background-color: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+}
+
+.status-badge.expired {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.status-badge.cancelled {
+    background-color: rgba(107, 114, 128, 0.2);
+    color: #d1d5db;
+}
+
+.expire-date {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.days-count {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.plan-reminder {
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-top: 1rem;
+    font-weight: 500;
+    border-left: 4px solid;
+}
+
+.plan-reminder p {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.plan-reminder-warning {
+    background-color: rgba(239, 108, 77, 0.15);
+    border-color: #f97316;
+    color: #fdba74;
+}
+
+.plan-reminder-warning p {
+    color: #fdba74;
+}
+
+.no-subscription {
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 1rem 0;
+    font-style: italic;
+}
+
 .content-list {
     background-color: var(--card-bg);
     border-radius: var(--border-radius);

@@ -133,8 +133,8 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="movieGenre">Genre</label>
-                        <input type="text" id="movieGenre" name="genre" pattern="[A-Za-z ]*" title="Only alphabetic characters and spaces are allowed">
+                        <label for="movieGenre">Genre *</label>
+                        <input type="text" id="movieGenre" name="genre" required pattern="[A-Za-z ]+" title="Only alphabetic characters and spaces are allowed">
                     </div>
                     <div class="form-group">
                         <label for="movieYear">Release Year</label>
@@ -155,12 +155,12 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="movieVideo">Video File</label>
-                    <input type="file" id="movieVideo" name="video" accept="video/*">
+                    <label for="movieVideo">Video File *</label>
+                    <input type="file" id="movieVideo" name="video" accept="video/*" required>
                 </div>
                 <div class="form-group">
-                    <label for="moviePoster">Poster Image</label>
-                    <input type="file" id="moviePoster" name="poster" accept="image/*">
+                    <label for="moviePoster">Poster Image *</label>
+                    <input type="file" id="moviePoster" name="poster" accept="image/*" required>
                 </div>
                 <div class="modal-form-actions">
                     <button type="submit" class="btn btn-primary">Save Movie</button>
@@ -182,13 +182,13 @@
                     <input type="text" id="musicTitle" name="title" required pattern="[A-Za-z ]+" title="Only alphabetic characters and spaces are allowed">
                 </div>
                 <div class="form-group">
-                    <label for="musicArtist">Artist</label>
-                    <input type="text" id="musicArtist" name="artist" pattern="[A-Za-z ]*" title="Only alphabetic characters and spaces are allowed">
+                    <label for="musicArtist">Artist *</label>
+                    <input type="text" id="musicArtist" name="artist" required pattern="[A-Za-z ]+" title="Only alphabetic characters and spaces are allowed">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="musicGenre">Genre</label>
-                        <input type="text" id="musicGenre" name="genre" pattern="[A-Za-z ]*" title="Only alphabetic characters and spaces are allowed">
+                        <label for="musicGenre">Genre *</label>
+                        <input type="text" id="musicGenre" name="genre" required pattern="[A-Za-z ]+" title="Only alphabetic characters and spaces are allowed">
                     </div>
                     <div class="form-group">
                         <label for="musicSubscription">Subscription Required</label>
@@ -199,12 +199,12 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="musicAudio">Audio File</label>
-                    <input type="file" id="musicAudio" name="audio" accept="audio/*">
+                    <label for="musicAudio">Audio File *</label>
+                    <input type="file" id="musicAudio" name="audio" accept="audio/*" required>
                 </div>
                 <div class="form-group">
-                    <label for="musicPoster">Cover Image</label>
-                    <input type="file" id="musicPoster" name="poster" accept="image/*">
+                    <label for="musicPoster">Cover Image *</label>
+                    <input type="file" id="musicPoster" name="poster" accept="image/*" required>
                 </div>
                 <div class="modal-form-actions">
                     <button type="submit" class="btn btn-primary">Save Music</button>

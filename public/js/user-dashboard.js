@@ -295,14 +295,24 @@ async function loadProfileSubscriptionStatus() {
         if (data.success && data.subscription) {
             const sub = data.subscription;
             const planName = (sub.plan_name || 'free').toLowerCase();
+            const { daysRemaining, isEndingSoon, reminderMessage } = calculatePlanStatus(sub.end_date);
 
             userSubscriptionPlan = normalizeSubscriptionPlan(planName);
+
+            let reminderHTML = '';
+            if (isEndingSoon) {
+                reminderHTML = `<div class="plan-reminder plan-reminder-warning" style="margin-top: 1rem;">
+                    <p>${reminderMessage}</p>
+                </div>`;
+            }
 
             statusContainer.innerHTML = `
                 <p><strong>Current Plan:</strong> ${getPlanDisplayName(planName)}</p>
                 <p><strong>Status:</strong> ${sub.status}</p>
                 <p><strong>Start Date:</strong> ${new Date(sub.start_date).toLocaleDateString()}</p>
                 <p><strong>End Date:</strong> ${sub.end_date ? new Date(sub.end_date).toLocaleDateString() : 'N/A'}</p>
+                ${daysRemaining !== null ? `<p><strong>Days Remaining:</strong> ${Math.max(0, daysRemaining)}</p>` : ''}
+                ${reminderHTML}
             `;
 
             // Allow direct cancel only for active paid memberships
@@ -1085,6 +1095,30 @@ async function loadHistory() {
 }
 
 // Load subscription
+// Helper function to calculate days remaining and check if plan is ending soon
+function calculatePlanStatus(endDate) {
+    if (!endDate) return { daysRemaining: null, isEndingSoon: false, reminderMessage: '' };
+    
+    const end = new Date(endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    
+    const diffTime = end - today;
+    const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    const isEndingSoon = daysRemaining <= 7 && daysRemaining > 0;
+    let reminderMessage = '';
+    
+    if (daysRemaining <= 0) {
+        reminderMessage = '❌ Your plan has expired';
+    } else if (isEndingSoon) {
+        reminderMessage = `⏰ Your plan expires in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}! Consider renewing soon.`;
+    }
+    
+    return { daysRemaining, isEndingSoon, reminderMessage };
+}
+
 async function loadSubscription() {
     try {
         // Load current subscription
@@ -1097,15 +1131,34 @@ async function loadSubscription() {
         if (subData.success && subData.subscription) {
             const sub = subData.subscription;
             const planName = (sub.plan_name || 'free').toLowerCase();
+            const { daysRemaining, isEndingSoon, reminderMessage } = calculatePlanStatus(sub.end_date);
+            const planType = planName === 'annual' ? '📅 Annual Plan' : planName === 'monthly' ? '📆 Monthly Plan' : '🆓 Free Plan';
+            
+            let reminderHTML = '';
+            if (isEndingSoon) {
+                reminderHTML = `<div class="plan-reminder plan-reminder-warning">
+                    <p>${reminderMessage}</p>
+                </div>`;
+            }
+            
             currentPlanDiv.innerHTML = `
-                <h4>${getPlanDisplayName(planName)}</h4>
-                <p class="price">${parseFloat(sub.price) === 0 ? 'Free' : `₹${parseFloat(sub.price).toFixed(2)}<span>${getPlanPeriodLabel(planName)}</span>`}</p>
-                <p>${sub.description}</p>
-                <p>Status: <strong>${sub.status}</strong></p>
-                ${sub.end_date ? `<p>Expires: ${new Date(sub.end_date).toLocaleDateString()}</p>` : ''}
+                <div class="plan-status">
+                    <h4>${getPlanDisplayName(planName)}</h4>
+                    <p class="plan-type">${planType}</p>
+                    <p class="price">${parseFloat(sub.price) === 0 ? 'Free' : `₹${parseFloat(sub.price).toFixed(2)}<span>${getPlanPeriodLabel(planName)}</span>`}</p>
+                    <p class="plan-description">${sub.description}</p>
+                    <div class="plan-details">
+                        <p><strong>Status:</strong> <span class="status-badge ${sub.status}">${sub.status.charAt(0).toUpperCase() + sub.status.slice(1)}</span></p>
+                        ${sub.end_date ? `
+                            <p><strong>Expires:</strong> <span class="expire-date">${new Date(sub.end_date).toLocaleDateString()}</span></p>
+                            ${daysRemaining !== null ? `<p><strong>Days Remaining:</strong> <span class="days-count">${Math.max(0, daysRemaining)}</span></p>` : ''}
+                        ` : '<p><strong>Duration:</strong> Unlimited</p>'}
+                    </div>
+                    ${reminderHTML}
+                </div>
             `;
         } else {
-            currentPlanDiv.innerHTML = '<p>No active subscription</p>';
+            currentPlanDiv.innerHTML = '<p class="no-subscription">No active subscription. Choose a plan below to get started!</p>';
         }
         
         // Load available plans

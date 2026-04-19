@@ -15,14 +15,14 @@ const confirmPasswordInput = document.getElementById('confirmPassword');
 let otpSent = false;
 
 // Password validation regex and function
-const PASSWORD_REGEX = /^[A-Z](?=.*[0-9])(?=.*[!@#$%^&*]).{7,}$/;
+const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*]).{8,}$/;
 
 function validatePasswordFormat(password) {
     if (!password) return { valid: false, errors: [] };
     
     const errors = [];
     if (password.length < 8) errors.push('length');
-    if (!/^[A-Z]/.test(password)) errors.push('capital');
+    if (!/[A-Z]/.test(password)) errors.push('capital');
     if (!/[0-9]/.test(password)) errors.push('number');
     if (!/[!@#$%^&*]/.test(password)) errors.push('special');
     
@@ -32,7 +32,7 @@ function validatePasswordFormat(password) {
 function updatePasswordRequirements(password) {
     const requirements = {
         'req-length': password.length >= 8,
-        'req-capital': /^[A-Z]/.test(password),
+        'req-capital': /[A-Z]/.test(password),
         'req-number': /[0-9]/.test(password),
         'req-special': /[!@#$%^&*]/.test(password)
     };
@@ -115,9 +115,9 @@ registerForm.addEventListener('submit', async (e) => {
             let errorMsg = 'Password must have: ';
             const requirementMessages = {
                 'length': 'minimum 8 characters',
-                'capital': 'first letter capital',
-                'number': 'at least one number',
-                'special': 'at least one special symbol (!@#$%^&*)'
+                'capital': 'Capital letter',
+                'number': 'Numbers',
+                'special': 'Special symbol (!@#$%^&*)'
             };
             
             const missing = passwordValidation.errors.map(err => requirementMessages[err]).join(', ');

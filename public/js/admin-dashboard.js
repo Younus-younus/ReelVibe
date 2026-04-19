@@ -536,23 +536,66 @@ async function saveMovie(e) {
 
     const movieTitle = document.getElementById('movieTitle').value.trim();
     const movieGenre = document.getElementById('movieGenre').value.trim();
+    const movieVideoFile = document.getElementById('movieVideo').files[0];
+    const moviePosterFile = document.getElementById('moviePoster').files[0];
+    const movieId = document.getElementById('movieId').value;
+
+    // Validation: Title
     if (!movieTitle) {
-        alert('Movie title is required');
+        alert('❌ Movie title is required');
         return;
     }
 
     if (!ALPHA_SPACE_REGEX.test(movieTitle)) {
-        alert('Movie title can contain only alphabetic characters and spaces');
+        alert('❌ Movie title can contain only alphabetic characters and spaces');
+        return;
+    }
+
+    // Validation: Genre
+    if (!movieGenre) {
+        alert('❌ Genre is required');
         return;
     }
 
     if (!isAlphabeticText(movieGenre)) {
-        alert('Movie genre can contain only alphabetic characters and spaces');
+        alert('❌ Genre can contain only alphabetic characters and spaces');
+        return;
+    }
+
+    // Validation: Video File (required for new movie, optional for edit)
+    if (!movieVideoFile && !movieId) {
+        alert('❌ Video file is required');
+        return;
+    }
+
+    if (movieVideoFile && !movieVideoFile.type.startsWith('video/')) {
+        alert('❌ Please select a valid video file (mp4, mkv, avi, etc.)');
+        return;
+    }
+
+    // Validation: Poster Image (required for new movie, optional for edit)
+    if (!moviePosterFile && !movieId) {
+        alert('❌ Poster image is required');
+        return;
+    }
+
+    if (moviePosterFile && !moviePosterFile.type.startsWith('image/')) {
+        alert('❌ Please select a valid image file (jpg, png, webp, etc.)');
+        return;
+    }
+
+    // File size validation
+    if (movieVideoFile && movieVideoFile.size > 500 * 1024 * 1024) {
+        alert('❌ Video file size must be less than 500MB');
+        return;
+    }
+
+    if (moviePosterFile && moviePosterFile.size > 10 * 1024 * 1024) {
+        alert('❌ Poster image size must be less than 10MB');
         return;
     }
     
     const formData = new FormData(e.target);
-    const movieId = document.getElementById('movieId').value;
     
     // Remove movieId from formData
     formData.delete('movieId');
@@ -656,28 +699,77 @@ async function saveMusic(e) {
     const musicTitle = document.getElementById('musicTitle').value.trim();
     const musicArtist = document.getElementById('musicArtist').value.trim();
     const musicGenre = document.getElementById('musicGenre').value.trim();
+    const musicAudioFile = document.getElementById('musicAudio').files[0];
+    const musicPosterFile = document.getElementById('musicPoster').files[0];
+    const musicId = document.getElementById('musicId').value;
+
+    // Validation: Title
     if (!musicTitle) {
-        alert('Music title is required');
+        alert('❌ Music title is required');
         return;
     }
 
     if (!ALPHA_SPACE_REGEX.test(musicTitle)) {
-        alert('Music title can contain only alphabetic characters and spaces');
+        alert('❌ Music title can contain only alphabetic characters and spaces');
+        return;
+    }
+
+    // Validation: Artist
+    if (!musicArtist) {
+        alert('❌ Artist name is required');
         return;
     }
 
     if (!isAlphabeticText(musicArtist)) {
-        alert('Music artist can contain only alphabetic characters and spaces');
+        alert('❌ Artist name can contain only alphabetic characters and spaces');
+        return;
+    }
+
+    // Validation: Genre
+    if (!musicGenre) {
+        alert('❌ Genre is required');
         return;
     }
 
     if (!isAlphabeticText(musicGenre)) {
-        alert('Music genre can contain only alphabetic characters and spaces');
+        alert('❌ Genre can contain only alphabetic characters and spaces');
+        return;
+    }
+
+    // Validation: Audio File (required for new music, optional for edit)
+    if (!musicAudioFile && !musicId) {
+        alert('❌ Audio file is required');
+        return;
+    }
+
+    if (musicAudioFile && !musicAudioFile.type.startsWith('audio/')) {
+        alert('❌ Please select a valid audio file (mp3, wav, m4a, etc.)');
+        return;
+    }
+
+    // Validation: Cover Image (required for new music, optional for edit)
+    if (!musicPosterFile && !musicId) {
+        alert('❌ Cover image is required');
+        return;
+    }
+
+    if (musicPosterFile && !musicPosterFile.type.startsWith('image/')) {
+        alert('❌ Please select a valid image file (jpg, png, webp, etc.)');
+        return;
+    }
+
+    // File size validation
+    if (musicAudioFile && musicAudioFile.size > 100 * 1024 * 1024) {
+        alert('❌ Audio file size must be less than 100MB');
+        return;
+    }
+
+    if (musicPosterFile && musicPosterFile.size > 10 * 1024 * 1024) {
+        alert('❌ Cover image size must be less than 10MB');
         return;
     }
     
     const formData = new FormData(e.target);
-    const musicId = document.getElementById('musicId').value;
     
     formData.delete('musicId');
     
